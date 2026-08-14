@@ -13,5 +13,93 @@ date: "2026-08-14"
 
 This is the code associated with a consulting report on a portfolio 
 containing a mixture of assets, specifically the Philippine stocks BDO, ICT, and SM,
-the international stocks AAPL and MSFT, and the cryptocurrency BTC.
+the international stocks AAPL and MSFT, and the cryptocurrency BTC. We use SPY
+as the primary benchmark to compare against.
 
+# Setup
+
+Initialize packages.
+
+```{r}
+pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite)
+```
+
+# Data Acquisition
+
+First, we pull the ticker data from Yahoo! Finance and PSE Edge.
+```{r}
+DATE_FROM <- "2020-01-02"
+DATE_FROM_MDY <- "01-02-2020"
+
+DATE_TO <- "2025-12-31"
+DATE_TO_MDY <- "12-31-2025"
+```
+
+Many PSE stocks are no longer offered on Yahoo! Finance, so we use another free
+alternative called PSE Edge.
+
+```{r}
+pse_pull <- function(cmpy_id, security_id, start = DATE_FROM_MDY, end = DATE_TO_MDY) {
+  resp <- POST("https://edge.pse.com.ph/common/DisclosureCht.ax",
+               body = list(cmpy_id = cmpy_id, security_id = security_id,
+                           startDate = start, endDate = end),   # MM-DD-YYYY
+               encode = "json",
+               add_headers(
+                 `X-Requested-With` = "XMLHttpRequest",
+                 Referer = "https://edge.pse.com.ph/companyPage/stockData.do",
+                 Origin = "https://edge.pse.com.ph",
+                 Accept = "application/json, text/javascript, */*; q=0.01"))
+  df <- fromJSON(content(resp, "text", encoding = "UTF-8"))$chartData
+  df$date <- as.Date(df$CHART_DATE, format = "%b %d, %Y 00:00:00")
+  df[order(df$date), c("date", "OPEN", "HIGH", "LOW", "CLOSE")]
+}
+
+yahoo_pull <- function(sym, start = DATE_FROM, end = DATE_TO) {
+  tq_get(sym, from = start, to = end) |>
+    transmute(date = as.Date(date), !!sym := round(adjusted, 4))
+}
+
+Sys.sleep(1); bdo <- pse_pull(260, 468); Sys.sleep(1)
+Sys.sleep(1); ict <- pse_pull(83, 142);  Sys.sleep(1)
+Sys.sleep(1); sm  <- pse_pull(599, 520); Sys.sleep(1)
+
+prices <- list(
+  BDO = bdo |> rename(BDO = CLOSE),
+  ICT = ict |> rename(ICT = CLOSE),
+  SM  = sm  |> rename(SM = CLOSE),
+  AAPL = yahoo_pull("AAPL"), MSFT = yahoo_pull("MSFT"), BTC = yahoo_pull("BTC-USD"), SPY = yahoo_pull("SPY")
+) |> reduce(inner_join, by = "date") |> arrange(date)
+
+dir.create("data", showWarnings = FALSE)
+write.csv(prices, "data/prices.csv", row.names = FALSE)
+save(prices, file = "data/prices.RData")
+```
+
+We also get the 91-day Treasury bill as the risk-free rate.
+We have to manually download it from https://data.bettergov.ph/datasets/12/resources/159
+because the website blocks automated downloads.
+
+```{r}
+tbill91 <- unlist(lapply(2020:2025, function(yr) {
+  gs <- read_excel("data/gs_rates_monthly.xlsx", sheet = as.character(yr), skip = 4)
+  row_91 <- gs[which(grepl("91-day", as.character(gs[[2]]))), ]   # label in col 2
+  as.numeric(unlist(row_91[1, seq(3, 25, by = 2)]))               # C,E,G,...,Y
+}))
+```
+
+# Exploratory Financial Analysis
+
+
+# Portfolio Construction
+
+
+# Portfolio Optimization
+
+
+# Portfolio Risk Assessment
+
+
+# Executive Recommendation
+
+
+# References
