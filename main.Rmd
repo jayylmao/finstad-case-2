@@ -1,0 +1,17 @@
+---
+title: "main"
+output: html_document
+date: "2026-08-14"
+---
+# Case 2 - Portfolio Management and Risk Consultation
+## Group Alpha
+
+- Aragon, Enrique Miguel Moreno
+- Cardiño, Joaquin Carlo Esteban
+- Carlos, Jay Michael Tenorio
+- Chua, Erin Gabrielle Tan
+
+This is the code associated with a consulting report on a portfolio 
+containing a mixture of assets, specifically the Philippine stocks BDO, ICT, and SM,
+the international stocks AAPL and MSFT, and the cryptocurrency BTC.
+
