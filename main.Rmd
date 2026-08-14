@@ -87,6 +87,15 @@ tbill91 <- unlist(lapply(2020:2025, function(yr) {
 }))
 ```
 
+We then clean the Treasury bill rates by dropping the blank months and
+computing the annual and daily risk-free rate.
+
+```{r}
+tbill91_pct <- na.omit(tbill91)                # drops blank / no-auction months
+rf_annual <- mean(tbill91_pct) / 100           # ~4% expected
+rf_daily  <- (1 + rf_annual)^(1 / 252) - 1     # use in Sharpe / frontier
+```
+
 # Exploratory Financial Analysis
 
 
