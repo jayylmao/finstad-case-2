@@ -27,6 +27,7 @@ pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl
 # Data Acquisition
 
 First, we pull the ticker data from Yahoo! Finance and PSE Edge.
+
 ```{r}
 DATE_FROM <- "2020-01-02"
 DATE_FROM_MDY <- "01-02-2020"
@@ -98,6 +99,19 @@ rf_daily  <- (1 + rf_annual)^(1 / 252) - 1     # use in Sharpe / frontier
 
 # Exploratory Financial Analysis
 
+First we compute for daily log returns to get a simple overview of each asset's
+performance.
+
+```{r}
+prices <- mutate(prices,
+                 BDO_return = log(BDO / lag(BDO, 1)),
+                 ICT_return = log(ICT / lag(ICT, 1)),
+                 SM_return = log(SM / lag(SM, 1)),
+                 AAPL_return = log(AAPL / lag(AAPL, 1)),
+                 MSFT_return = log(MSFT / lag(MSFT, 1)),
+                 BTC_return = log(`BTC-USD` / lag(`BTC-USD`, 1)),
+                 SPY_return = log(ICT / lag(SPY, 1)))
+```
 
 # Portfolio Construction
 
