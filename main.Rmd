@@ -51,6 +51,7 @@ pse_pull <- function(cmpy_id, security_id, start = DATE_FROM_MDY, end = DATE_TO_
                  Accept = "application/json, text/javascript, */*; q=0.01"))
   df <- fromJSON(content(resp, "text", encoding = "UTF-8"))$chartData
   df$date <- as.Date(df$CHART_DATE, format = "%b %d, %Y 00:00:00")
+  df <- distinct(df, date, .keep_all = TRUE)
   df[order(df$date), c("date", "OPEN", "HIGH", "LOW", "CLOSE")]
 }
 
