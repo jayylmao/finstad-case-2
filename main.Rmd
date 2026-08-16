@@ -140,7 +140,24 @@ prices_php <- mutate(prices_php,
 Then present the findings in a table for easier understanding.
 
 ```{r}
+findings_summary <- prices_php |>
+  select(date, BDO, ICT, SM, AAPL, MSFT, `BTC-USD`, SPY) |>
+  pivot_longer(-date, names_to = "asset", values_to = "price") |>
+  group_by(asset) |>
+  mutate(ret = log(price / lag(price))) |>
+  summarise(
+    `Mean Daily Ret (%)` = mean(ret, na.rm = TRUE) * 100,
+    `SD Daily Ret (%)`   = sd(ret, na.rm = TRUE) * 100,
+    `Ann. Ret (%)`       = mean(ret, na.rm = TRUE) * 252 * 100,
+    `Ann. Vol (%)`       = sd(ret, na.rm = TRUE) * sqrt(252) * 100,
+    Sharpe               = (mean(ret, na.rm = TRUE) * 252 - rf_annual) /
+                           (sd(ret, na.rm = TRUE) * sqrt(252)),
+    `Max Drawdown (%)`   = min(cumprod(1 + ret) / cummax(cumprod(1 + ret)) - 1) * 100
+  ) |>
+  ungroup()
 
+
+knitr::kable(findings_summary, digits = 3)
 ```
 
 # Portfolio Construction
