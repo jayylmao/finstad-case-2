@@ -20,7 +20,7 @@ as the primary benchmark to compare against.
 Initialize packages.
 
 ```{r}
-pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite)
+pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, , quadprog)
 ```
 
 # Data Acquisition
@@ -185,7 +185,7 @@ optimization and risk targets are expressed on an annual basis.
 
 ```{r}
 #expected return vector
-mu    <- colMeans(returns) * 252
+mu <- colMeans(returns) * 252
 
 # risk
 Sigma <- cov(returns) * 252
@@ -200,23 +200,23 @@ compare our optimized portfolios against.
 ```{r}
 portfolio_growth <- function(weights, ret_df = ret_data, rebalance = FALSE) {
   dates <- ret_df$date
-  rets  <- as.matrix(select(ret_df, ends_with("_return")))
+  rets <- as.matrix(select(ret_df, ends_with("_return")))
 
   if (!rebalance) {
     asset_growth <- apply(rets, 2, function(r) cumprod(1 + r))
-    port_value   <- as.numeric(asset_growth %*% weights)
+    port_value <- as.numeric(asset_growth %*% weights)
   } else {
-    month_id   <- format(dates, "%Y-%m")
+    month_id <- format(dates, "%Y-%m")
     port_value <- numeric(length(dates))
-    value      <- 1
-    holdings   <- value * weights
+    value <- 1
+    holdings <- value * weights
 
     for (i in seq_along(dates)) {
       if (i > 1 && month_id[i] != month_id[i - 1]) {
         holdings <- value * weights 
       }
-      holdings   <- holdings * (1 + rets[i, ])
-      value      <- sum(holdings)
+      holdings <- holdings * (1 + rets[i, ])
+      value <- sum(holdings)
       port_value[i] <- value
     }
   }
@@ -233,7 +233,7 @@ more risk than planned.
 eq_weights <- rep(1 / n_assets, n_assets)
 
 eq_no_rebal <- portfolio_growth(eq_weights, rebalance = FALSE) |> mutate(portfolio = "Equal Weight (No Rebalance)")
-eq_rebal    <- portfolio_growth(eq_weights, rebalance = TRUE)  |> mutate(portfolio = "Equal Weight (Monthly Rebalance)")
+eq_rebal <- portfolio_growth(eq_weights, rebalance = TRUE)  |> mutate(portfolio = "Equal Weight (Monthly Rebalance)")
 
 ```
 
@@ -241,11 +241,68 @@ Lastly, we initialize equal weighing among the assets and call `portfolio_growth
 
 # Portfolio Optimization
 
+With the return matrix and baseline established, we now solve for the three portfolios, the Efficient Frontier, the Global
+Minimum Variance (GMV) Portfolio, and the Maximum Sharpe Portfolio. We use the `quadprog` (quadratic programming) library to help with portfolio optimization. In general, these 3 techniques or theories all aim to achieve a singular goal, that being how to best balance or optimze the ratio
+of returns given risks in its own way.
+
 ### Efficient Frontier
+
+The efficient frontier is a core concept in Modern Portfolio Theory (MPT) introduced by Harry Markowitz in 1952. It is a curved line on a graph that shows the best investment portfolios, these portfolios give the highest expected return for a set level of risk, or the lowest risk for a set level of return.
+
+We trace the frontier by minimizing variance for a grid of target returns spanning the achievable range.
+
+```{r}
+target_rets <- seq(min(mu), max(mu), length.out = 100)
+
+eff_frontier <- map_dfr(target_rets, function(tr) {
+  Amat_ef <- cbind(rep(1, n_assets), mu, diag(n_assets))
+  bvec_ef <- c(1, tr, rep(0, n_assets))
+
+  sol <- tryCatch(solve.QP(Dmat, dvec, Amat_ef, bvec_ef, meq = 2),
+                   error = function(e) NULL)
+  if (is.null(sol)) return(NULL)
+
+  w <- sol$solution
+  tibble(
+    target_ret = tr,
+    ret = sum(w * mu),
+    vol = as.numeric(sqrt(t(w) %*% Sigma %*% w)),
+    sharpe = (sum(w * mu) - rf_annual) / as.numeric(sqrt(t(w) %*% Sigma %*% w)),
+    weights = list(setNames(w, assets))
+  )
+})
+```
 
 ### Global Minimum Variance Portfolio
 
+A Global Minimum Variance (GMV) Portfolio is a specialized asset mix built from a set of risky investments that achieves the lowest possible total risk or price volatility (variance). It sits at the absolute leftmost point of the efficient frontier curve in MPT.
+
+The GMV portfolio minimizes `w'Σw` subject to weights summing to 1. 
+```{r}
+Dmat <- 2 * Sigma
+dvec <- rep(0, n_assets)
+
+Amat <- cbind(rep(1, n_assets), diag(n_assets))   # sum(w) = 1, w_i >= 0
+bvec <- c(1, rep(0, n_assets))
+
+gmv_sol <- solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
+gmv_weights <- setNames(gmv_sol$solution, assets)
+
+gmv_ret <- sum(gmv_weights * mu)
+gmv_vol <- as.numeric(sqrt(t(gmv_weights) %*% Sigma %*% gmv_weights))
+
+knitr::kable(data.frame(Asset = assets, Weight = round(gmv_weights, 4)))
+```
+
 ### Maximum Sharpe Portfolio
+A Maximum Sharpe Portfolio is the optimal asset allocation on the efficient frontier that delivers the highest possible excess return per unit of total risk (volatility).
+
+```{r}
+max_sharpe_row <- eff_frontier |> slice_max(sharpe, n = 1)
+max_sharpe_weights <- max_sharpe_row$weights[[1]]
+
+knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))
+```
 
 
 # Portfolio Risk Assessment
