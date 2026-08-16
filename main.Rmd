@@ -152,7 +152,8 @@ findings_summary <- prices_php |>
     `Ann. Vol (%)`       = sd(ret, na.rm = TRUE) * sqrt(252) * 100,
     Sharpe               = (mean(ret, na.rm = TRUE) * 252 - rf_annual) /
                            (sd(ret, na.rm = TRUE) * sqrt(252)),
-    `Max Drawdown (%)`   = min(cumprod(1 + ret) / cummax(cumprod(1 + ret)) - 1) * 100
+    `Max Drawdown (%)` = { r <- ret[!is.na(ret)];
+                       min(cumprod(1 + r) / cummax(cumprod(1 + r)) - 1) * 100 }
   ) |>
   ungroup()
 
