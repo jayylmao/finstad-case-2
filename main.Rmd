@@ -1,9 +1,8 @@
 ---
-title: "main"
+title: "Case 2 - Portfolio Management and Risk Consultation"
 output: html_document
 date: "2026-08-14"
 ---
-# Case 2 - Portfolio Management and Risk Consultation
 ## Group Alpha
 
 - Aragon, Enrique Miguel Moreno
