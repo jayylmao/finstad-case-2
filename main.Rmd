@@ -162,8 +162,91 @@ knitr::kable(findings_summary, digits = 3)
 
 # Portfolio Construction
 
+We construct a portfolio using these 6 assets: BDO, ICT, SM, AAPL, MSFT, and BTC. 
+We start with building a returns matrix as each optimization technique (Efficient Frontier, 
+Global Minimum Variance, and Maximum Sharpe) relies on return data.
+
+```{r}
+ret_data <- prices_php |>
+  select(date, ends_with("_return"), -SPY_return) |>
+  na.omit()
+
+assets <- c("BDO", "ICT", "SM", "AAPL", "MSFT", "BTC")
+
+returns <- as.matrix(select(ret_data, ends_with("_return")))
+colnames(returns) <- assets
+
+n_assets <- length(assets)
+
+n_assets
+```
+
+We annualize the mean return vector and covariance matrix, since all our
+optimization and risk targets are expressed on an annual basis.
+
+```{r}
+#expected return vector
+mu    <- colMeans(returns) * 252
+
+# risk
+Sigma <- cov(returns) * 252
+
+data.frame(Asset = assets, `Annual Return (%)` = round(mu * 100, 2), check.names = FALSE)
+```
+
+To see the effects of optimization on our portfolio, we create a baseline of a 
+a simple equal weighted portfolio, with anf without rebalancing. This baseline gives us something to 
+compare our optimized portfolios against.
+
+```{r}
+portfolio_growth <- function(weights, ret_df = ret_data, rebalance = FALSE) {
+  dates <- ret_df$date
+  rets  <- as.matrix(select(ret_df, ends_with("_return")))
+
+  if (!rebalance) {
+    asset_growth <- apply(rets, 2, function(r) cumprod(1 + r))
+    port_value   <- as.numeric(asset_growth %*% weights)
+  } else {
+    month_id   <- format(dates, "%Y-%m")
+    port_value <- numeric(length(dates))
+    value      <- 1
+    holdings   <- value * weights
+
+    for (i in seq_along(dates)) {
+      if (i > 1 && month_id[i] != month_id[i - 1]) {
+        holdings <- value * weights 
+      }
+      holdings   <- holdings * (1 + rets[i, ])
+      value      <- sum(holdings)
+      port_value[i] <- value
+    }
+  }
+
+  tibble(date = dates, value = port_value)
+}
+```
+
+We rebalance because prices move and starts pulling the actual portfolio away from that optimum.
+Over time, some assets grow faster than others which can shift the target mix and exposes the assets to 
+more risk than planned.
+
+```{r}
+eq_weights <- rep(1 / n_assets, n_assets)
+
+eq_no_rebal <- portfolio_growth(eq_weights, rebalance = FALSE) |> mutate(portfolio = "Equal Weight (No Rebalance)")
+eq_rebal    <- portfolio_growth(eq_weights, rebalance = TRUE)  |> mutate(portfolio = "Equal Weight (Monthly Rebalance)")
+
+```
+
+Lastly, we initialize equal weighing among the assets and call `portfolio_growth()` to create paths with and without monthly rebalancing.
 
 # Portfolio Optimization
+
+### Efficient Frontier
+
+### Global Minimum Variance Portfolio
+
+### Maximum Sharpe Portfolio
 
 
 # Portfolio Risk Assessment
