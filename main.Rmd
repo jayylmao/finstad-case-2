@@ -64,6 +64,10 @@ Sys.sleep(1); bdo <- pse_pull(260, 468); Sys.sleep(1)
 Sys.sleep(1); ict <- pse_pull(83, 142);  Sys.sleep(1)
 Sys.sleep(1); sm  <- pse_pull(599, 520); Sys.sleep(1)
 
+# Pull USD/PHP exchange rate
+fx <- yahoo_pull("USDPHP=X", start = DATE_FROM, end = DATE_TO) |> 
+  rename(USDPHP = `USDPHP=X`)
+
 prices <- list(
   BDO = bdo |> rename(BDO = CLOSE),
   ICT = ict |> rename(ICT = CLOSE),
@@ -71,9 +75,29 @@ prices <- list(
   AAPL = yahoo_pull("AAPL"), MSFT = yahoo_pull("MSFT"), BTC = yahoo_pull("BTC-USD"), SPY = yahoo_pull("SPY")
 ) |> reduce(inner_join, by = "date") |> arrange(date)
 
+# Combine and convert USD assets to PHP
+prices_php <- list(
+  BDO = bdo |> rename(BDO = CLOSE),
+  ICT = ict |> rename(ICT = CLOSE),
+  SM  = sm  |> rename(SM = CLOSE),
+  AAPL = yahoo_pull("AAPL"),
+  MSFT = yahoo_pull("MSFT"),
+  BTC  = yahoo_pull("BTC-USD"),
+  SPY  = yahoo_pull("SPY")
+) |> 
+  reduce(inner_join, by = "date") |> 
+  inner_join(fx, by = "date") |> 
+  mutate(
+    AAPL_PHP = AAPL * USDPHP,
+    MSFT_PHP = MSFT * USDPHP,
+    BTC_PHP  = `BTC-USD`  * USDPHP,
+    SPY_PHP  = SPY  * USDPHP
+  ) |> 
+  arrange(date)
+
 dir.create("data", showWarnings = FALSE)
-write.csv(prices, "data/prices.csv", row.names = FALSE)
-save(prices, file = "data/prices.RData")
+write.csv(prices_php, "data/prices.csv", row.names = FALSE)
+save(prices_php, file = "data/prices.RData")
 ```
 
 We also get the 91-day Treasury bill as the risk-free rate.
@@ -103,14 +127,20 @@ First we compute for daily log returns to get a simple overview of each asset's
 performance.
 
 ```{r}
-prices <- mutate(prices,
+prices_php <- mutate(prices_php,
                  BDO_return = log(BDO / lag(BDO, 1)),
                  ICT_return = log(ICT / lag(ICT, 1)),
                  SM_return = log(SM / lag(SM, 1)),
                  AAPL_return = log(AAPL / lag(AAPL, 1)),
                  MSFT_return = log(MSFT / lag(MSFT, 1)),
                  BTC_return = log(`BTC-USD` / lag(`BTC-USD`, 1)),
-                 SPY_return = log(ICT / lag(SPY, 1)))
+                 SPY_return = log(SPY / lag(SPY, 1)))
+```
+
+Then present the findings in a table for easier understanding.
+
+```{r}
+
 ```
 
 # Portfolio Construction
