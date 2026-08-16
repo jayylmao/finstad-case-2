@@ -158,7 +158,7 @@ findings_summary <- prices_php |>
   ungroup()
 
 
-knitr::kable(findings_summary, digits = 3)
+print(findings_summary)
 ```
 
 # Portfolio Construction
