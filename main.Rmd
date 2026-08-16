@@ -20,7 +20,7 @@ as the primary benchmark to compare against.
 Initialize packages.
 
 ```{r}
-pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, , quadprog)
+pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog)
 ```
 
 # Data Acquisition
@@ -178,7 +178,8 @@ colnames(returns) <- assets
 
 n_assets <- length(assets)
 
-n_assets
+print(n_assets)
+print(head(returns))
 ```
 
 We annualize the mean return vector and covariance matrix, since all our
@@ -272,6 +273,8 @@ eff_frontier <- map_dfr(target_rets, function(tr) {
     weights = list(setNames(w, assets))
   )
 })
+
+target_rets
 ```
 
 ### Global Minimum Variance Portfolio
