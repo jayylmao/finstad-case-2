@@ -163,6 +163,284 @@ findings_summary <- rets_wide |>
 print(findings_summary)
 ```
 
+
+## Descriptive Statistics
+
+We create a table comprised of the returns of each asset to compute for descriptive statistics.
+
+```{r}
+returns_tbl <- prices_php  |> 
+
+  select(date,
+         BDO_return,
+         ICT_return,
+         SM_return,
+         AAPL_return,
+         MSFT_return,
+         BTC_return,
+         SPY_return)
+
+head(returns_tbl)
+dim(returns_tbl)
+```
+
+```{r}
+descriptive_table <- tibble(
+
+  Statistic = c(
+    "Mean",
+    "Median",
+    "Trimmed Mean",
+    "Standard Deviation",
+    "Variance",
+    "Minimum",
+    "Q1",
+    "Q3",
+    "Maximum",
+    "Range",
+    "Interquartile Range",
+    "Coefficient of Variation",
+    "Skewness",
+    "Kurtosis",
+    "Observations"
+  ),
+
+  BDO = c(
+    mean(returns_tbl$BDO_return, na.rm = TRUE),
+    median(returns_tbl$BDO_return, na.rm = TRUE),
+    mean(returns_tbl$BDO_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$BDO_return, na.rm = TRUE),
+    var(returns_tbl$BDO_return, na.rm = TRUE),
+    min(returns_tbl$BDO_return, na.rm = TRUE),
+    quantile(returns_tbl$BDO_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$BDO_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$BDO_return, na.rm = TRUE),
+    diff(range(returns_tbl$BDO_return, na.rm = TRUE)),
+    IQR(returns_tbl$BDO_return, na.rm = TRUE),
+    sd(returns_tbl$BDO_return, na.rm = TRUE) /
+      mean(returns_tbl$BDO_return, na.rm = TRUE),
+    skewness(returns_tbl$BDO_return, na.rm = TRUE),
+    kurtosis(returns_tbl$BDO_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$BDO_return))
+  ),
+  
+  ICT = c(
+    mean(returns_tbl$ICT_return, na.rm = TRUE),
+    median(returns_tbl$ICT_return, na.rm = TRUE),
+    mean(returns_tbl$ICT_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$ICT_return, na.rm = TRUE),
+    var(returns_tbl$ICT_return, na.rm = TRUE),
+    min(returns_tbl$ICT_return, na.rm = TRUE),
+    quantile(returns_tbl$ICT_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$ICT_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$ICT_return, na.rm = TRUE),
+    diff(range(returns_tbl$ICT_return, na.rm = TRUE)),
+    IQR(returns_tbl$ICT_return, na.rm = TRUE),
+    sd(returns_tbl$ICT_return, na.rm = TRUE) /
+      mean(returns_tbl$ICT_return, na.rm = TRUE),
+    skewness(returns_tbl$ICT_return, na.rm = TRUE),
+    kurtosis(returns_tbl$ICT_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$ICT_return))
+  ),
+  
+  SM = c(
+    mean(returns_tbl$SM_return, na.rm = TRUE),
+    median(returns_tbl$SM_return, na.rm = TRUE),
+    mean(returns_tbl$SM_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$SM_return, na.rm = TRUE),
+    var(returns_tbl$SM_return, na.rm = TRUE),
+    min(returns_tbl$SM_return, na.rm = TRUE),
+    quantile(returns_tbl$SM_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$SM_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$SM_return, na.rm = TRUE),
+    diff(range(returns_tbl$SM_return, na.rm = TRUE)),
+    IQR(returns_tbl$SM_return, na.rm = TRUE),
+    sd(returns_tbl$SM_return, na.rm = TRUE) /
+      mean(returns_tbl$SM_return, na.rm = TRUE),
+    skewness(returns_tbl$SM_return, na.rm = TRUE),
+    kurtosis(returns_tbl$SM_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$SM_return))
+  ),
+  
+  AAPL = c(
+    mean(returns_tbl$AAPL_return, na.rm = TRUE),
+    median(returns_tbl$AAPL_return, na.rm = TRUE),
+    mean(returns_tbl$AAPL_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$AAPL_return, na.rm = TRUE),
+    var(returns_tbl$AAPL_return, na.rm = TRUE),
+    min(returns_tbl$AAPL_return, na.rm = TRUE),
+    quantile(returns_tbl$AAPL_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$AAPL_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$AAPL_return, na.rm = TRUE),
+    diff(range(returns_tbl$AAPL_return, na.rm = TRUE)),
+    IQR(returns_tbl$AAPL_return, na.rm = TRUE),
+    sd(returns_tbl$AAPL_return, na.rm = TRUE) /
+      mean(returns_tbl$AAPL_return, na.rm = TRUE),
+    skewness(returns_tbl$AAPL_return, na.rm = TRUE),
+    kurtosis(returns_tbl$AAPL_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$AAPL_return))
+  ),
+  
+  MSFT = c(
+    mean(returns_tbl$MSFT_return, na.rm = TRUE),
+    median(returns_tbl$MSFT_return, na.rm = TRUE),
+    mean(returns_tbl$MSFT_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$MSFT_return, na.rm = TRUE),
+    var(returns_tbl$MSFT_return, na.rm = TRUE),
+    min(returns_tbl$MSFT_return, na.rm = TRUE),
+    quantile(returns_tbl$MSFT_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$MSFT_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$MSFT_return, na.rm = TRUE),
+    diff(range(returns_tbl$MSFT_return, na.rm = TRUE)),
+    IQR(returns_tbl$MSFT_return, na.rm = TRUE),
+    sd(returns_tbl$MSFT_return, na.rm = TRUE) /
+      mean(returns_tbl$MSFT_return, na.rm = TRUE),
+    skewness(returns_tbl$MSFT_return, na.rm = TRUE),
+    kurtosis(returns_tbl$MSFT_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$MSFT_return))
+  ),
+  
+  BTC = c(
+    mean(returns_tbl$BTC_return, na.rm = TRUE),
+    median(returns_tbl$BTC_return, na.rm = TRUE),
+    mean(returns_tbl$BTC_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$BTC_return, na.rm = TRUE),
+    var(returns_tbl$BTC_return, na.rm = TRUE),
+    min(returns_tbl$BTC_return, na.rm = TRUE),
+    quantile(returns_tbl$BTC_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$BTC_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$BTC_return, na.rm = TRUE),
+    diff(range(returns_tbl$BTC_return, na.rm = TRUE)),
+    IQR(returns_tbl$BTC_return, na.rm = TRUE),
+    sd(returns_tbl$BTC_return, na.rm = TRUE) /
+      mean(returns_tbl$BTC_return, na.rm = TRUE),
+    skewness(returns_tbl$BTC_return, na.rm = TRUE),
+    kurtosis(returns_tbl$BTC_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$BTC_return))
+  ),
+  
+  SPY = c(
+    mean(returns_tbl$SPY_return, na.rm = TRUE),
+    median(returns_tbl$SPY_return, na.rm = TRUE),
+    mean(returns_tbl$SPY_return, trim = 0.05, na.rm = TRUE),
+    sd(returns_tbl$SPY_return, na.rm = TRUE),
+    var(returns_tbl$SPY_return, na.rm = TRUE),
+    min(returns_tbl$SPY_return, na.rm = TRUE),
+    quantile(returns_tbl$SPY_return, 0.25, na.rm = TRUE),
+    quantile(returns_tbl$SPY_return, 0.75, na.rm = TRUE),
+    max(returns_tbl$SPY_return, na.rm = TRUE),
+    diff(range(returns_tbl$SPY_return, na.rm = TRUE)),
+    IQR(returns_tbl$SPY_return, na.rm = TRUE),
+    sd(returns_tbl$SPY_return, na.rm = TRUE) /
+      mean(returns_tbl$SPY_return, na.rm = TRUE),
+    skewness(returns_tbl$SPY_return, na.rm = TRUE),
+    kurtosis(returns_tbl$SPY_return, na.rm = TRUE),
+    sum(!is.na(returns_tbl$SPY_return))
+  )
+)
+
+descriptive_table
+
+
+```
+Correlation Matrix
+
+```{r}
+correlation_matrix <- returns_tbl  |> 
+  select(-date)  |> 
+  cor(use = "complete.obs")
+correlation_matrix
+
+```
+Covariation Matrix
+```{r}
+covariance_matrix <- returns_tbl |> 
+  select(-date)  |> 
+  cov(use = "complete.obs")
+covariance_matrix
+
+View(prices_php)
+```
+
+## Data Visualization
+
+Figure 1: Indexed Price Trend 
+```{r}
+indexed_prices <- prices_php|>
+  select(date, BDO, ICT, SM, AAPL_PHP, MSFT_PHP, BTC_PHP, SPY_PHP) |>
+  mutate(across(-date, ~ .x / first(.x) * 100)) |>
+  tidyr::pivot_longer(-date, names_to = "asset", values_to = "indexed_price")
+
+ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
+  geom_line(linewidth = 0.7, na.rm = TRUE) +
+  labs(
+    title = "Figure 1: Indexed Price Trend (Base = 100, Jan 2020)",
+    x = "Date",
+    y = "Indexed Price"
+  ) +
+  theme_minimal()
+```
+Figure 2 Daily Return Distribution
+```{r}
+returns_long_viz <-  prices_php|>
+  select(date, BDO_return, ICT_return, SM_return, AAPL_return, MSFT_return, BTC_return, SPY_return) |>
+  tidyr::pivot_longer(-date, names_to = "asset", values_to = "return")
+
+ggplot(returns_long_viz, aes(x = return, fill = asset)) +
+  geom_histogram(bins = 60) +
+  facet_wrap(~asset, scales = "free") +
+  labs(
+    title = "Figure 2: Distribution of Daily Returns by Asset",
+    x = "Daily Return",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+Figure 3 30-Day Rolling Volatility
+```{r}
+rolling_vol <- prices_php |>
+  arrange(date) |>
+  mutate(
+    bdo_vol_30d = zoo::rollapply(BDO_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    ict_vol_30d = zoo::rollapply(ICT_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    sm_vol_30d = zoo::rollapply(SM_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    aapl_vol_30d = zoo::rollapply(AAPL_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    msft_vol_30d = zoo::rollapply(MSFT_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    btc_vol_30d = zoo::rollapply(BTC_return, width = 30, FUN = sd, fill = NA, align = "right"),
+    spy_vol_30d = zoo::rollapply(SPY_return, width = 30, FUN = sd, fill = NA, align = "right")
+  ) |>
+  select(date, bdo_vol_30d, ict_vol_30d, sm_vol_30d, aapl_vol_30d, msft_vol_30d, btc_vol_30d, spy_vol_30d) |>
+  tidyr::pivot_longer(-date, names_to = "asset", values_to = "rolling_vol")
+
+ggplot(rolling_vol, aes(x = date, y = rolling_vol, color = asset)) +
+  geom_line(linewidth = 0.6, na.rm = TRUE) +
+  labs(
+    title = "Figure 3: 30-Day Rolling Volatility by Asset",
+    x = "Date",
+    y = "30-Day Rolling Std. Dev. of Return"
+  ) +
+  theme_minimal()
+```
+
+
+## EFA
+
+1. Comparing Results and Volatility Across Assets
+```{r}
+return_vol_summary <- returns_long_viz |>
+  group_by(asset) |>
+  summarise(
+    avg_daily_return = mean(return, na.rm = TRUE),
+    annualized_return = mean(return, na.rm = TRUE) * 252,
+    daily_volatility = sd(return, na.rm = TRUE),
+    annualized_volatility = sd(return, na.rm = TRUE) * sqrt(252)
+  ) |>
+  arrange(desc(annualized_return))
+
+return_vol_summary
+```
+
 # Portfolio Construction
 
 We construct a portfolio using these 6 assets: BDO, ICT, SM, AAPL, MSFT, and BTC. 
