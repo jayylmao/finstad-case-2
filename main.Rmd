@@ -57,13 +57,6 @@ Sys.sleep(1); sm  <- pse_pull(599, 520); Sys.sleep(1)
 fx <- yahoo_pull("USDPHP=X", start = DATE_FROM, end = DATE_TO) |> 
   rename(USDPHP = `USDPHP=X`)
 
-prices <- list(
-  BDO = bdo |> rename(BDO = CLOSE),
-  ICT = ict |> rename(ICT = CLOSE),
-  SM  = sm  |> rename(SM = CLOSE),
-  AAPL = yahoo_pull("AAPL"), MSFT = yahoo_pull("MSFT"), BTC = yahoo_pull("BTC-USD"), SPY = yahoo_pull("SPY")
-) |> reduce(inner_join, by = "date") |> arrange(date)
-
 # Combine and convert USD assets to PHP
 prices_php <- list(
   BDO = bdo |> rename(BDO = CLOSE),
