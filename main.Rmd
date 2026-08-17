@@ -20,23 +20,12 @@ as the primary benchmark to compare against.
 Initialize packages.
 
 ```{r}
-pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog)
+pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog, PerformanceAnalytics, xts, flextable)
 ```
 
 # Data Acquisition
 
 First, we pull the ticker data from Yahoo! Finance and PSE Edge.
-
-```{r}
-DATE_FROM <- "2020-01-02"
-DATE_FROM_MDY <- "01-02-2020"
-
-DATE_TO <- "2025-12-31"
-DATE_TO_MDY <- "12-31-2025"
-```
-
-Many PSE stocks are no longer offered on Yahoo! Finance, so we use another free
-alternative called PSE Edge.
 
 ```{r}
 pse_pull <- function(cmpy_id, security_id, start = DATE_FROM_MDY, end = DATE_TO_MDY) {
@@ -314,6 +303,41 @@ knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))
 
 # Portfolio Risk Assessment
 
+Having constructed the Equal-Weight, GMV, and Maximum Sharpe portfolios, this section will assess how
+each portfolio handles risk based on, 
+
+- Risk evaluation
+- Descriptive statistics per portfolio
+- Visualizations
+
+## Risk Evaluation
+
+Here we focus on computing risk management techniques, specifically Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo Simulation, and Stress Testing. 
+
+We first compute a daily portfolio return series for each portfolio, this would act as the raw input for each measure. 
+
+```{r}
+eq_weights <- rep(1 / n_assets, n_assets)
+
+port_returns <- tibble(
+  date = ret_data$date,
+  `Equal-Weight` = as.numeric(R %*% eq_weights),
+  `GMV` = as.numeric(R %*% gmv_weights),
+  `Max Sharpe` = as.numeric(R %*% max_sharpe_weights)
+)
+
+#standard confidence level
+conf_level <- 0.95 
+```
+
+#### Historical VaR
+#### Parametric VaR
+#### Expected Shortfall (CVaR) 
+#### Monte Carlo Simulation
+#### Stress Testing
+
+## Descriptive Statistics
+## Visualization
 
 # Executive Recommendation
 
