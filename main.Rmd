@@ -166,7 +166,7 @@ print(findings_summary)
 
 ## Descriptive Statistics
 
-We create a table comprised of the returns of each asset to compute for descriptive statistics.
+We create a table comprised of the returns of each asset to compute for numerous descriptive statistics pertaining to the daily returns of each asset, as well as their financial implications when creating an investment portfolio.
 
 ```{r}
 returns_tbl <- prices_php  |> 
@@ -183,7 +183,7 @@ returns_tbl <- prices_php  |>
 head(returns_tbl)
 dim(returns_tbl)
 ```
-
+After verifying the proper creation of the return table, the descriptive statistics are calculated.
 ```{r}
 descriptive_table <- tibble(
 
@@ -343,7 +343,16 @@ descriptive_table
 
 
 ```
-Correlation Matrix
+### Relevant Implications/Observations
+- BTC has the greatest mean return among all the assets, which makes sense given its volatile nature as a cryptocurrency. On the other hand, BDO and SM have negative mean returns, showing that they tend to lose value on the average day. The remaining assets (ICT, SM, MSFT) all have means within the same range that are greater than SPY's mean returns.
+- AAPL, MSFT, BTC, and SPY all have positive median returns, while BDO, ICT, and SM all have median returns of 0. This aligns with their low mean returns.
+- BTC is also the most volatile asset, as seen in its significantly higher standard deviation and variance relative to the other assets. In contrast, SPY is the most stable or least volatile option, making it a good benchmark to compare against the other assets.
+- Backed by its high volatility, BTC also comes out as the asset with the most range, followed by BDO, while the rest of the assets sit in a fairly similar range. SPY, however, also has the smallest range among the 7 assets.
+- Both BDO and SM have a negative coefficient of variation, meaning they actually lose value despite the risk associated with them. This is backed by the negative mean returns for the same assets.
+- All 7 assets have a negative skewness, indicating that they are more prone to large crashes rather than small dips over time. BDO, SM, and SPY all have especially low skewness values.
+- All 7 assets have a positive kurtosis, which means they all have a decent likelihood to have extreme outliers. BDO and BTC having especially high values, supported by their high volatility.
+
+### Correlation Matrix
 
 ```{r}
 correlation_matrix <- returns_tbl  |> 
@@ -352,15 +361,17 @@ correlation_matrix <- returns_tbl  |>
 correlation_matrix
 
 ```
-Covariation Matrix
+While the correlation between the assets is generally fairly low, AAPL and MSFT show an extremely high correlation with SPY, and with each other. This makes sense as AAPL and MSFT are both giants in the tech industry, with similar products and markets. BDO, ICT, and SM also display a moderate correlation at around 0.3-0.4 correlation with each other. While they are not as closely related as AAPL and MFST in terms of the industry they are a part of, the three being Philippine companies means they follow the country's general economic trends rather than U.S. trends. Another notable observation is that BTC also shares a similar level of correlation (0.3-0.4) with MSFT, AAPL, and SPY.
+
+### Covariation Matrix
 ```{r}
 covariance_matrix <- returns_tbl |> 
   select(-date)  |> 
   cov(use = "complete.obs")
 covariance_matrix
 
-View(prices_php)
 ```
+The strong correlation between AAPL and MSFT carries over into the covariance matrix, with the two assets sharing the highest covariance score with each other. Similarly solid covariance scores between BTC, AAPL, MSFT, and SPY all reflect previous insights found in the correlation matrix. When creating a portfolio, investing heavily in stocks such as AAPL and MSFT together may not add much diversification to it. While their performance is generally poorer, the low covariance between the Philippine stocks and the U.S. stocks means that they would be a stronger option for introducing diversity to a portfolio.
 
 ## Data Visualization
 
