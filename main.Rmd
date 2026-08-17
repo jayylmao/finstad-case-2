@@ -255,6 +255,11 @@ The efficient frontier is a core concept in Modern Portfolio Theory (MPT) introd
 We trace the frontier by minimizing variance for a grid of target returns spanning the achievable range.
 
 ```{r}
+Dmat <- 2 * Sigma
+dvec <- rep(0, n_assets)
+```
+
+```{r}
 target_rets <- seq(min(mu), max(mu), length.out = 100)
 
 eff_frontier <- map_dfr(target_rets, function(tr) {
@@ -284,9 +289,6 @@ A Global Minimum Variance (GMV) Portfolio is a specialized asset mix built from 
 
 The GMV portfolio minimizes `w'Σw` subject to weights summing to 1. 
 ```{r}
-Dmat <- 2 * Sigma
-dvec <- rep(0, n_assets)
-
 Amat <- cbind(rep(1, n_assets), diag(n_assets))   # sum(w) = 1, w_i >= 0
 bvec <- c(1, rep(0, n_assets))
 
