@@ -373,7 +373,7 @@ against.</p>
 <div id="setup" class="section level1">
 <h1>Setup</h1>
 <p>Initialize packages.</p>
-<pre class="r"><code>pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite)</code></pre>
+<pre class="r"><code>pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog)</code></pre>
 </div>
 <div id="data-acquisition" class="section level1">
 <h1>Data Acquisition</h1>
@@ -397,6 +397,7 @@ another free alternative called PSE Edge.</p>
                  Accept = &quot;application/json, text/javascript, */*; q=0.01&quot;))
   df &lt;- fromJSON(content(resp, &quot;text&quot;, encoding = &quot;UTF-8&quot;))$chartData
   df$date &lt;- as.Date(df$CHART_DATE, format = &quot;%b %d, %Y 00:00:00&quot;)
+  df &lt;- distinct(df, date, .keep_all = TRUE)
   df[order(df$date), c(&quot;date&quot;, &quot;OPEN&quot;, &quot;HIGH&quot;, &quot;LOW&quot;, &quot;CLOSE&quot;)]
 }
 
@@ -500,99 +501,24 @@ each asset’s performance.</p>
     `Ann. Vol (%)`       = sd(ret, na.rm = TRUE) * sqrt(252) * 100,
     Sharpe               = (mean(ret, na.rm = TRUE) * 252 - rf_annual) /
                            (sd(ret, na.rm = TRUE) * sqrt(252)),
-    `Max Drawdown (%)`   = min(cumprod(1 + ret) / cummax(cumprod(1 + ret)) - 1) * 100
+    `Max Drawdown (%)` = { r &lt;- ret[!is.na(ret)];
+                       min(cumprod(1 + r) / cummax(cumprod(1 + r)) - 1) * 100 }
   ) |&gt;
   ungroup()
 
 
-knitr::kable(findings_summary, digits = 3)</code></pre>
-<table style="width:100%;">
-<colgroup>
-<col width="8%" />
-<col width="20%" />
-<col width="18%" />
-<col width="13%" />
-<col width="13%" />
-<col width="7%" />
-<col width="18%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">asset</th>
-<th align="right">Mean Daily Ret (%)</th>
-<th align="right">SD Daily Ret (%)</th>
-<th align="right">Ann. Ret (%)</th>
-<th align="right">Ann. Vol (%)</th>
-<th align="right">Sharpe</th>
-<th align="right">Max Drawdown (%)</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">AAPL</td>
-<td align="right">0.067</td>
-<td align="right">1.751</td>
-<td align="right">16.967</td>
-<td align="right">27.799</td>
-<td align="right">0.483</td>
-<td align="right">NA</td>
-</tr>
-<tr class="even">
-<td align="left">BDO</td>
-<td align="right">-0.007</td>
-<td align="right">1.986</td>
-<td align="right">-1.719</td>
-<td align="right">31.526</td>
-<td align="right">-0.167</td>
-<td align="right">NA</td>
-</tr>
-<tr class="odd">
-<td align="left">BTC-USD</td>
-<td align="right">0.128</td>
-<td align="right">3.452</td>
-<td align="right">32.217</td>
-<td align="right">54.792</td>
-<td align="right">0.523</td>
-<td align="right">NA</td>
-</tr>
-<tr class="even">
-<td align="left">ICT</td>
-<td align="right">0.075</td>
-<td align="right">2.017</td>
-<td align="right">18.802</td>
-<td align="right">32.024</td>
-<td align="right">0.476</td>
-<td align="right">NA</td>
-</tr>
-<tr class="odd">
-<td align="left">MSFT</td>
-<td align="right">0.059</td>
-<td align="right">1.625</td>
-<td align="right">14.825</td>
-<td align="right">25.795</td>
-<td align="right">0.437</td>
-<td align="right">NA</td>
-</tr>
-<tr class="even">
-<td align="left">SM</td>
-<td align="right">-0.020</td>
-<td align="right">1.641</td>
-<td align="right">-5.051</td>
-<td align="right">26.053</td>
-<td align="right">-0.330</td>
-<td align="right">NA</td>
-</tr>
-<tr class="odd">
-<td align="left">SPY</td>
-<td align="right">0.042</td>
-<td align="right">1.123</td>
-<td align="right">10.691</td>
-<td align="right">17.828</td>
-<td align="right">0.400</td>
-<td align="right">NA</td>
-</tr>
-</tbody>
-</table>
+print(findings_summary)</code></pre>
+<pre><code>## # A tibble: 7 × 7
+##   asset   `Mean Daily Ret (%)` `SD Daily Ret (%)` `Ann. Ret (%)` `Ann. Vol (%)`
+##   &lt;chr&gt;                  &lt;dbl&gt;              &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;
+## 1 AAPL                  0.106                2.20          26.7            34.9
+## 2 BDO                  -0.0107               2.49          -2.71           39.6
+## 3 BTC-USD               0.201                4.33          50.8            68.8
+## 4 ICT                   0.118                2.53          29.6            40.2
+## 5 MSFT                  0.0927               2.04          23.4            32.4
+## 6 SM                   -0.0316               2.06          -7.96           32.7
+## 7 SPY                   0.0668               1.41          16.8            22.4
+## # ℹ 2 more variables: Sharpe &lt;dbl&gt;, `Max Drawdown (%)` &lt;dbl&gt;</code></pre>
 </div>
 <div id="portfolio-construction" class="section level1">
 <h1>Portfolio Construction</h1>
@@ -611,47 +537,55 @@ colnames(returns) &lt;- assets
 
 n_assets &lt;- length(assets)
 
-n_assets</code></pre>
+print(n_assets)</code></pre>
 <pre><code>## [1] 6</code></pre>
+<pre class="r"><code>print(head(returns))</code></pre>
+<pre><code>##            BDO          ICT           SM         AAPL         MSFT         BTC
+## 2  0.006472515  0.041437190  0.011483380 -0.009769239 -0.012530295  0.05017175
+## 3  0.000000000 -0.003696862 -0.010521379  0.007936964  0.002581716  0.05616561
+## 4  0.000000000 -0.018692133  0.025630259 -0.004714503 -0.009159971  0.04952690
+## 5 -0.019544596 -0.005297023 -0.011310205  0.015958359  0.015803342 -0.01032167
+## 6  0.000000000  0.016554178  0.015985296  0.021018084  0.012415292 -0.02516485
+## 7  0.006557401 -0.011257155  0.006508624  0.002259055 -0.004638100  0.03583702</code></pre>
 <p>We annualize the mean return vector and covariance matrix, since all
 our optimization and risk targets are expressed on an annual basis.</p>
 <pre class="r"><code>#expected return vector
-mu    &lt;- colMeans(returns) * 252
+mu &lt;- colMeans(returns) * 252
 
 # risk
 Sigma &lt;- cov(returns) * 252
 
 data.frame(Asset = assets, `Annual Return (%)` = round(mu * 100, 2), check.names = FALSE)</code></pre>
 <pre><code>##      Asset Annual Return (%)
-## BDO    BDO             -1.72
-## ICT    ICT             18.80
-## SM      SM             -5.05
-## AAPL  AAPL             16.97
-## MSFT  MSFT             14.82
-## BTC    BTC             32.22</code></pre>
+## BDO    BDO             -2.71
+## ICT    ICT             29.62
+## SM      SM             -7.96
+## AAPL  AAPL             26.73
+## MSFT  MSFT             23.36
+## BTC    BTC             50.76</code></pre>
 <p>To see the effects of optimization on our portfolio, we create a
 baseline of a a simple equal weighted portfolio, with anf without
 rebalancing. This baseline gives us something to compare our optimized
 portfolios against.</p>
 <pre class="r"><code>portfolio_growth &lt;- function(weights, ret_df = ret_data, rebalance = FALSE) {
   dates &lt;- ret_df$date
-  rets  &lt;- as.matrix(select(ret_df, ends_with(&quot;_return&quot;)))
+  rets &lt;- as.matrix(select(ret_df, ends_with(&quot;_return&quot;)))
 
   if (!rebalance) {
     asset_growth &lt;- apply(rets, 2, function(r) cumprod(1 + r))
-    port_value   &lt;- as.numeric(asset_growth %*% weights)
+    port_value &lt;- as.numeric(asset_growth %*% weights)
   } else {
-    month_id   &lt;- format(dates, &quot;%Y-%m&quot;)
+    month_id &lt;- format(dates, &quot;%Y-%m&quot;)
     port_value &lt;- numeric(length(dates))
-    value      &lt;- 1
-    holdings   &lt;- value * weights
+    value &lt;- 1
+    holdings &lt;- value * weights
 
     for (i in seq_along(dates)) {
       if (i &gt; 1 &amp;&amp; month_id[i] != month_id[i - 1]) {
         holdings &lt;- value * weights 
       }
-      holdings   &lt;- holdings * (1 + rets[i, ])
-      value      &lt;- sum(holdings)
+      holdings &lt;- holdings * (1 + rets[i, ])
+      value &lt;- sum(holdings)
       port_value[i] &lt;- value
     }
   }
@@ -665,21 +599,183 @@ more risk than planned.</p>
 <pre class="r"><code>eq_weights &lt;- rep(1 / n_assets, n_assets)
 
 eq_no_rebal &lt;- portfolio_growth(eq_weights, rebalance = FALSE) |&gt; mutate(portfolio = &quot;Equal Weight (No Rebalance)&quot;)
-eq_rebal    &lt;- portfolio_growth(eq_weights, rebalance = TRUE)  |&gt; mutate(portfolio = &quot;Equal Weight (Monthly Rebalance)&quot;)</code></pre>
+eq_rebal &lt;- portfolio_growth(eq_weights, rebalance = TRUE)  |&gt; mutate(portfolio = &quot;Equal Weight (Monthly Rebalance)&quot;)</code></pre>
 <p>Lastly, we initialize equal weighing among the assets and call
 <code>portfolio_growth()</code> to create paths with and without monthly
 rebalancing.</p>
 </div>
 <div id="portfolio-optimization" class="section level1">
 <h1>Portfolio Optimization</h1>
+<p>With the return matrix and baseline established, we now solve for the
+three portfolios, the Efficient Frontier, the Global Minimum Variance
+(GMV) Portfolio, and the Maximum Sharpe Portfolio. We use the
+<code>quadprog</code> (quadratic programming) library to help with
+portfolio optimization. In general, these 3 techniques or theories all
+aim to achieve a singular goal, that being how to best balance or
+optimze the ratio of returns given risks in its own way.</p>
 <div id="efficient-frontier" class="section level3">
 <h3>Efficient Frontier</h3>
+<p>The efficient frontier is a core concept in Modern Portfolio Theory
+(MPT) introduced by Harry Markowitz in 1952. It is a curved line on a
+graph that shows the best investment portfolios, these portfolios give
+the highest expected return for a set level of risk, or the lowest risk
+for a set level of return.</p>
+<p>We trace the frontier by minimizing variance for a grid of target
+returns spanning the achievable range.</p>
+<pre class="r"><code>Dmat &lt;- 2 * Sigma
+dvec &lt;- rep(0, n_assets)</code></pre>
+<pre class="r"><code>target_rets &lt;- seq(min(mu), max(mu), length.out = 100)
+
+eff_frontier &lt;- map_dfr(target_rets, function(tr) {
+  Amat_ef &lt;- cbind(rep(1, n_assets), mu, diag(n_assets))
+  bvec_ef &lt;- c(1, tr, rep(0, n_assets))
+
+  sol &lt;- tryCatch(solve.QP(Dmat, dvec, Amat_ef, bvec_ef, meq = 2),
+                   error = function(e) NULL)
+  if (is.null(sol)) return(NULL)
+
+  w &lt;- sol$solution
+  tibble(
+    target_ret = tr,
+    ret = sum(w * mu),
+    vol = as.numeric(sqrt(t(w) %*% Sigma %*% w)),
+    sharpe = (sum(w * mu) - rf_annual) / as.numeric(sqrt(t(w) %*% Sigma %*% w)),
+    weights = list(setNames(w, assets))
+  )
+})
+
+target_rets</code></pre>
+<pre><code>##   [1] -0.079571704 -0.073641160 -0.067710615 -0.061780071 -0.055849526
+##   [6] -0.049918981 -0.043988437 -0.038057892 -0.032127348 -0.026196803
+##  [11] -0.020266259 -0.014335714 -0.008405169 -0.002474625  0.003455920
+##  [16]  0.009386464  0.015317009  0.021247554  0.027178098  0.033108643
+##  [21]  0.039039187  0.044969732  0.050900277  0.056830821  0.062761366
+##  [26]  0.068691910  0.074622455  0.080552999  0.086483544  0.092414089
+##  [31]  0.098344633  0.104275178  0.110205722  0.116136267  0.122066812
+##  [36]  0.127997356  0.133927901  0.139858445  0.145788990  0.151719534
+##  [41]  0.157650079  0.163580624  0.169511168  0.175441713  0.181372257
+##  [46]  0.187302802  0.193233347  0.199163891  0.205094436  0.211024980
+##  [51]  0.216955525  0.222886070  0.228816614  0.234747159  0.240677703
+##  [56]  0.246608248  0.252538792  0.258469337  0.264399882  0.270330426
+##  [61]  0.276260971  0.282191515  0.288122060  0.294052605  0.299983149
+##  [66]  0.305913694  0.311844238  0.317774783  0.323705328  0.329635872
+##  [71]  0.335566417  0.341496961  0.347427506  0.353358050  0.359288595
+##  [76]  0.365219140  0.371149684  0.377080229  0.383010773  0.388941318
+##  [81]  0.394871863  0.400802407  0.406732952  0.412663496  0.418594041
+##  [86]  0.424524586  0.430455130  0.436385675  0.442316219  0.448246764
+##  [91]  0.454177308  0.460107853  0.466038398  0.471968942  0.477899487
+##  [96]  0.483830031  0.489760576  0.495691121  0.501621665  0.507552210</code></pre>
 </div>
 <div id="global-minimum-variance-portfolio" class="section level3">
 <h3>Global Minimum Variance Portfolio</h3>
+<p>A Global Minimum Variance (GMV) Portfolio is a specialized asset mix
+built from a set of risky investments that achieves the lowest possible
+total risk or price volatility (variance). It sits at the absolute
+leftmost point of the efficient frontier curve in MPT.</p>
+<p>The GMV portfolio minimizes <code>w&#39;Σw</code> subject to weights
+summing to 1.</p>
+<pre class="r"><code>Amat &lt;- cbind(rep(1, n_assets), diag(n_assets))   # sum(w) = 1, w_i &gt;= 0
+bvec &lt;- c(1, rep(0, n_assets))
+
+gmv_sol &lt;- solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
+gmv_weights &lt;- setNames(gmv_sol$solution, assets)
+
+gmv_ret &lt;- sum(gmv_weights * mu)
+gmv_vol &lt;- as.numeric(sqrt(t(gmv_weights) %*% Sigma %*% gmv_weights))
+
+knitr::kable(data.frame(Asset = assets, Weight = round(gmv_weights, 4)))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Asset</th>
+<th align="right">Weight</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">BDO</td>
+<td align="left">BDO</td>
+<td align="right">0.1249</td>
+</tr>
+<tr class="even">
+<td align="left">ICT</td>
+<td align="left">ICT</td>
+<td align="right">0.1517</td>
+</tr>
+<tr class="odd">
+<td align="left">SM</td>
+<td align="left">SM</td>
+<td align="right">0.2825</td>
+</tr>
+<tr class="even">
+<td align="left">AAPL</td>
+<td align="left">AAPL</td>
+<td align="right">0.1414</td>
+</tr>
+<tr class="odd">
+<td align="left">MSFT</td>
+<td align="left">MSFT</td>
+<td align="right">0.2939</td>
+</tr>
+<tr class="even">
+<td align="left">BTC</td>
+<td align="left">BTC</td>
+<td align="right">0.0055</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="maximum-sharpe-portfolio" class="section level3">
 <h3>Maximum Sharpe Portfolio</h3>
+<p>A Maximum Sharpe Portfolio is the optimal asset allocation on the
+efficient frontier that delivers the highest possible excess return per
+unit of total risk (volatility).</p>
+<pre class="r"><code>max_sharpe_row &lt;- eff_frontier |&gt; slice_max(sharpe, n = 1)
+max_sharpe_weights &lt;- max_sharpe_row$weights[[1]]
+
+knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Asset</th>
+<th align="right">Weight</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">BDO</td>
+<td align="left">BDO</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="even">
+<td align="left">ICT</td>
+<td align="left">ICT</td>
+<td align="right">0.3980</td>
+</tr>
+<tr class="odd">
+<td align="left">SM</td>
+<td align="left">SM</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="even">
+<td align="left">AAPL</td>
+<td align="left">AAPL</td>
+<td align="right">0.2810</td>
+</tr>
+<tr class="odd">
+<td align="left">MSFT</td>
+<td align="left">MSFT</td>
+<td align="right">0.1176</td>
+</tr>
+<tr class="even">
+<td align="left">BTC</td>
+<td align="left">BTC</td>
+<td align="right">0.2034</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="portfolio-risk-assessment" class="section level1">
