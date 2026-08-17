@@ -374,6 +374,7 @@ against.</p>
 <h1>Setup</h1>
 <p>Initialize packages.</p>
 <pre class="r"><code>pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog, PerformanceAnalytics, xts, flextable)</code></pre>
+<pre class="r"><code>RANDOM_SEED &lt;- 42</code></pre>
 </div>
 <div id="data-acquisition" class="section level1">
 <h1>Data Acquisition</h1>
@@ -534,10 +535,10 @@ print(n_assets)</code></pre>
 <pre><code>## [1] 6</code></pre>
 <pre class="r"><code>print(head(returns))</code></pre>
 <pre><code>##            BDO          ICT           SM         AAPL         MSFT         BTC
-## 2  0.006472515  0.041437190  0.011483380 -0.009769239 -0.012529636  0.05017175
+## 2  0.006472515  0.041437190  0.011483380 -0.009769239 -0.012530295  0.05017175
 ## 3  0.000000000 -0.003696862 -0.010521379  0.007936964  0.002581716  0.05616561
-## 4  0.000000000 -0.018692133  0.025630259 -0.004714503 -0.009159971  0.04952690
-## 5 -0.019544596 -0.005297023 -0.011310205  0.015958359  0.015803342 -0.01032167
+## 4  0.000000000 -0.018692133  0.025630259 -0.004714503 -0.009159300  0.04952690
+## 5 -0.019544596 -0.005297023 -0.011310205  0.015958359  0.015802671 -0.01032167
 ## 6  0.000000000  0.016554178  0.015985296  0.021018084  0.012415292 -0.02516485
 ## 7  0.006557401 -0.011257155  0.006508624  0.002259055 -0.004637444  0.03583702</code></pre>
 <p>We annualize the mean return vector and covariance matrix, since all
@@ -658,6 +659,8 @@ target_rets</code></pre>
 ##  [86]  0.424524586  0.430455130  0.436385675  0.442316219  0.448246764
 ##  [91]  0.454177308  0.460107853  0.466038398  0.471968942  0.477899487
 ##  [96]  0.483830031  0.489760576  0.495691121  0.501621665  0.507552210</code></pre>
+<pre class="r"><code># !VISUALIZATION
+# efficient frontier</code></pre>
 </div>
 <div id="global-minimum-variance-portfolio" class="section level3">
 <h3>Global Minimum Variance Portfolio</h3>
@@ -770,6 +773,34 @@ knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))<
 </tbody>
 </table>
 </div>
+<div id="cross-portfolio-visualizations" class="section level2">
+<h2>Cross-Portfolio Visualizations</h2>
+<div id="historical-price-plot" class="section level3">
+<h3>Historical Price Plot</h3>
+<pre class="r"><code># !VISUALIZATION
+# </code></pre>
+</div>
+<div id="daily-return-plot" class="section level3">
+<h3>Daily Return Plot</h3>
+<pre class="r"><code># !VISUALIZATION
+# </code></pre>
+</div>
+<div id="correlation-heatmap" class="section level3">
+<h3>Correlation Heatmap</h3>
+<pre class="r"><code># !VISUALIZATION
+# </code></pre>
+</div>
+<div id="portfolio-allocation" class="section level3">
+<h3>Portfolio Allocation</h3>
+<pre class="r"><code># !VISUALIZATION
+# portfolio allocation</code></pre>
+</div>
+<div id="optimized-portfolio-growth-comparison" class="section level3">
+<h3>Optimized Portfolio Growth Comparison</h3>
+<pre class="r"><code># !VISUALIZATION
+# portfolio growth comparison (rebalances vs no rebalance per portoflio)</code></pre>
+</div>
+</div>
 </div>
 <div id="portfolio-risk-assessment" class="section level1">
 <h1>Portfolio Risk Assessment</h1>
@@ -853,16 +884,79 @@ data.frame(Portfolio = names(expected_shortfall),
 </div>
 <div id="monte-carlo-simulation" class="section level4">
 <h4>Monte Carlo Simulation</h4>
+<pre class="r"><code>set.seed(RANDOM_SEED)
+n_sim_val &lt;- 5000
+
+simulate_portfolio_var &lt;- function(port_ret, n_sim = n_sim_val, conf = conf_level) {
+  mu_p &lt;- mean(port_ret, na.rm = TRUE)
+  sigma_p &lt;- sd(port_ret, na.rm = TRUE)
+
+  sim_returns &lt;- rnorm(n_sim, mean = mu_p, sd = sigma_p)
+
+  tibble(
+    VaR = -quantile(sim_returns, probs = 1 - conf),
+    ES = -mean(sim_returns[sim_returns &lt;= quantile(sim_returns, probs = 1 - conf)])
+  )
+}
+
+mc_results &lt;- bind_rows(
+  simulate_portfolio_var(port_returns$`Equal-Weight`) |&gt; mutate(Portfolio = &quot;Equal-Weight&quot;),
+  simulate_portfolio_var(port_returns$GMV) |&gt; mutate(Portfolio = &quot;GMV&quot;),
+  simulate_portfolio_var(port_returns$`Max Sharpe`) |&gt; mutate(Portfolio = &quot;Max Sharpe&quot;)
+) |&gt; relocate(Portfolio)
+
+data.frame(mc_results |&gt; mutate(across(c(VaR, ES), ~ round(.x, 4))))</code></pre>
+<pre><code>##      Portfolio    VaR     ES
+## 1 Equal-Weight 0.0249 0.0313
+## 2          GMV 0.0222 0.0274
+## 3   Max Sharpe 0.0283 0.0356</code></pre>
+<p><strong>Historical vs. Monte Carlo Distribution</strong></p>
+<pre class="r"><code># !VISUALIZATION
+# historical vs monte carlo dist</code></pre>
 </div>
 <div id="stress-testing" class="section level4">
 <h4>Stress Testing</h4>
+<pre class="r"><code>stress_scenarios &lt;- list(
+  &quot;Market-Wide Crash (-20%)&quot;   = rep(-0.20, n_assets),
+  &quot;BTC Crash (-50%), rest flat&quot; = c(BDO = 0, ICT = 0, SM = 0, AAPL = 0, MSFT = 0, BTC = -0.50),
+  &quot;PH Market Selloff (-15% local, flat abroad)&quot; =
+    c(BDO = -0.15, ICT = -0.15, SM = -0.15, AAPL = 0, MSFT = 0, BTC = 0),
+  &quot;Global Equity Correction (-10% equities, BTC -25%)&quot; =
+    c(BDO = -0.10, ICT = -0.10, SM = -0.10, AAPL = -0.10, MSFT = -0.10, BTC = -0.25)
+)
+
+stress_test &lt;- function(weights, scenario) {
+  sum(weights * scenario)
+}
+
+stress_results &lt;- map_dfr(names(stress_scenarios), function(scenario_name) {
+  shock &lt;- stress_scenarios[[scenario_name]]
+  tibble(
+    Scenario = scenario_name,
+    `Equal-Weight` = stress_test(eq_weights, shock),
+    GMV = stress_test(gmv_weights, shock),
+    `Max Sharpe` = stress_test(max_sharpe_weights, shock)
+  )
+})
+
+data.frame(stress_results |&gt; mutate(across(where(is.numeric), ~ scales::percent(.x, accuracy = 0.1))))</code></pre>
+<pre><code>##                                             Scenario Equal.Weight    GMV
+## 1                           Market-Wide Crash (-20%)       -20.0% -20.0%
+## 2                        BTC Crash (-50%), rest flat        -8.3%  -0.3%
+## 3        PH Market Selloff (-15% local, flat abroad)        -7.5%  -8.4%
+## 4 Global Equity Correction (-10% equities, BTC -25%)       -12.5% -10.1%
+##   Max.Sharpe
+## 1     -20.0%
+## 2     -10.2%
+## 3      -6.0%
+## 4     -13.1%</code></pre>
+<p><strong>Stress Testing Chart</strong></p>
+<pre class="r"><code># !VISUALIZATION
+# stress testing chart</code></pre>
 </div>
 </div>
 <div id="descriptive-statistics" class="section level2">
 <h2>Descriptive Statistics</h2>
-</div>
-<div id="visualization" class="section level2">
-<h2>Visualization</h2>
 </div>
 </div>
 <div id="executive-recommendation" class="section level1">
