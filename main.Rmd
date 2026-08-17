@@ -279,6 +279,11 @@ eff_frontier <- map_dfr(target_rets, function(tr) {
 target_rets
 ```
 
+```{r}
+# !VISUALIZATION
+# efficient frontier
+```
+
 ### Global Minimum Variance Portfolio
 
 A Global Minimum Variance (GMV) Portfolio is a specialized asset mix built from a set of risky investments that achieves the lowest possible total risk or price volatility (variance). It sits at the absolute leftmost point of the efficient frontier curve in MPT.
@@ -307,6 +312,40 @@ max_sharpe_weights <- max_sharpe_row$weights[[1]]
 knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))
 ```
 
+## Cross-Portfolio Visualizations
+
+### Historical Price Plot
+```{r}
+# !VISUALIZATION
+# 
+```
+
+
+### Daily Return Plot
+```{r}
+# !VISUALIZATION
+# 
+```
+
+### Correlation Heatmap
+```{r}
+# !VISUALIZATION
+# 
+```
+
+### Portfolio Allocation
+
+```{r}
+# !VISUALIZATION
+# portfolio allocation
+```
+
+### Optimized Portfolio Growth Comparison
+
+```{r}
+# !VISUALIZATION
+# portfolio growth comparison (rebalances vs no rebalance per portoflio)
+```
 
 # Portfolio Risk Assessment
 
@@ -412,7 +451,46 @@ mc_results <- bind_rows(
 data.frame(mc_results |> mutate(across(c(VaR, ES), ~ round(.x, 4))))
 ```
 
+**Historical vs. Monte Carlo Distribution**
+```{r}
+# !VISUALIZATION
+# historical vs monte carlo dist
+```
+
 #### Stress Testing
+
+```{r}
+stress_scenarios <- list(
+  "Market-Wide Crash (-20%)"   = rep(-0.20, n_assets),
+  "BTC Crash (-50%), rest flat" = c(BDO = 0, ICT = 0, SM = 0, AAPL = 0, MSFT = 0, BTC = -0.50),
+  "PH Market Selloff (-15% local, flat abroad)" =
+    c(BDO = -0.15, ICT = -0.15, SM = -0.15, AAPL = 0, MSFT = 0, BTC = 0),
+  "Global Equity Correction (-10% equities, BTC -25%)" =
+    c(BDO = -0.10, ICT = -0.10, SM = -0.10, AAPL = -0.10, MSFT = -0.10, BTC = -0.25)
+)
+
+stress_test <- function(weights, scenario) {
+  sum(weights * scenario)
+}
+
+stress_results <- map_dfr(names(stress_scenarios), function(scenario_name) {
+  shock <- stress_scenarios[[scenario_name]]
+  tibble(
+    Scenario = scenario_name,
+    `Equal-Weight` = stress_test(eq_weights, shock),
+    GMV = stress_test(gmv_weights, shock),
+    `Max Sharpe` = stress_test(max_sharpe_weights, shock)
+  )
+})
+
+data.frame(stress_results |> mutate(across(where(is.numeric), ~ scales::percent(.x, accuracy = 0.1))))
+```
+
+**Stress Testing Chart**
+```{r}
+# !VISUALIZATION
+# stress testing chart
+```
 
 ## Descriptive Statistics
 ## Visualization
