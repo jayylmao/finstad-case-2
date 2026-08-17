@@ -375,7 +375,10 @@ The strong correlation between AAPL and MSFT carries over into the covariance ma
 
 ## Data Visualization
 
-Figure 1: Indexed Price Trend 
+While descriptive stats offer good numerical insight into the data, visualization is needed to create a more complete exploratory financial analysis. Similar to the descriptive statistics section, the prices_php dataset is used as the base for every figure.
+
+### Figure 1: Indexed Price Trend 
+Raw prices aren’t directly comparable since the assets trade on completely different price scales. Re-basing each series to start at 100 lets us compare growth trajectories side by side.
 ```{r}
 indexed_prices <- prices_php|>
   select(date, BDO, ICT, SM, AAPL_PHP, MSFT_PHP, BTC_PHP, SPY_PHP) |>
@@ -391,7 +394,9 @@ ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
   ) +
   theme_minimal()
 ```
-Figure 2 Daily Return Distribution
+
+
+### Figure 2 Daily Return Distribution
 ```{r}
 returns_long_viz <-  prices_php|>
   select(date, BDO_return, ICT_return, SM_return, AAPL_return, MSFT_return, BTC_return, SPY_return) |>
@@ -408,7 +413,7 @@ ggplot(returns_long_viz, aes(x = return, fill = asset)) +
   theme_minimal() +
   theme(legend.position = "none")
 ```
-Figure 3 30-Day Rolling Volatility
+### Figure 3 30-Day Rolling Volatility
 ```{r}
 rolling_vol <- prices_php |>
   arrange(date) |>
@@ -433,11 +438,28 @@ ggplot(rolling_vol, aes(x = date, y = rolling_vol, color = asset)) +
   ) +
   theme_minimal()
 ```
+### 4. Correlation Heatmap
+```{r}
+corr_df <- as.data.frame(correlation_matrix) |>
+  tibble::rownames_to_column("asset1") |>
+  tidyr::pivot_longer(-asset1, names_to = "asset2", values_to = "correlation")
+
+ggplot(corr_df, aes(x = asset1, y = asset2, fill = correlation)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(correlation, 2)), size = 3.5) +
+  scale_fill_gradient2(low = "steelblue", mid = "white", high = "firebrick", midpoint = 0) +
+  labs(
+    title = "Figure 5: Correlation Heatmap of Daily Returns",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal()
+```
 
 
-## EFA
 
-1. Comparing Results and Volatility Across Assets
+
+Comparing Results and Volatility Across Assets
 ```{r}
 return_vol_summary <- returns_long_viz |>
   group_by(asset) |>
