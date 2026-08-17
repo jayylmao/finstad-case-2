@@ -23,6 +23,10 @@ Initialize packages.
 pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog, PerformanceAnalytics, xts, flextable)
 ```
 
+```{r}
+RANDOM_SEED <- 42
+```
+
 # Data Acquisition
 
 First, we pull the ticker data from Yahoo! Finance and PSE Edge.
@@ -382,6 +386,32 @@ data.frame(Portfolio = names(expected_shortfall),
 ```
 
 #### Monte Carlo Simulation
+
+```{r}
+set.seed(RANDOM_SEED)
+n_sim_val <- 5000
+
+simulate_portfolio_var <- function(port_ret, n_sim = n_sim_val, conf = conf_level) {
+  mu_p <- mean(port_ret, na.rm = TRUE)
+  sigma_p <- sd(port_ret, na.rm = TRUE)
+
+  sim_returns <- rnorm(n_sim, mean = mu_p, sd = sigma_p)
+
+  tibble(
+    VaR = -quantile(sim_returns, probs = 1 - conf),
+    ES = -mean(sim_returns[sim_returns <= quantile(sim_returns, probs = 1 - conf)])
+  )
+}
+
+mc_results <- bind_rows(
+  simulate_portfolio_var(port_returns$`Equal-Weight`) |> mutate(Portfolio = "Equal-Weight"),
+  simulate_portfolio_var(port_returns$GMV) |> mutate(Portfolio = "GMV"),
+  simulate_portfolio_var(port_returns$`Max Sharpe`) |> mutate(Portfolio = "Max Sharpe")
+) |> relocate(Portfolio)
+
+data.frame(mc_results |> mutate(across(c(VaR, ES), ~ round(.x, 4))))
+```
+
 #### Stress Testing
 
 ## Descriptive Statistics
