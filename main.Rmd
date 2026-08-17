@@ -55,7 +55,7 @@ pse_pull <- function(cmpy_id, security_id, start = DATE_FROM_MDY, end = DATE_TO_
   df <- fromJSON(content(resp, "text", encoding = "UTF-8"))$chartData
   df$date <- as.Date(df$CHART_DATE, format = "%b %d, %Y 00:00:00")
   df <- distinct(df, date, .keep_all = TRUE)
-  df[order(df$date), c("date", "OPEN", "HIGH", "LOW", "CLOSE")]
+  df[order(df$date), c("date", "CLOSE")]
 }
 
 yahoo_pull <- function(sym, start = DATE_FROM, end = DATE_TO) {
@@ -91,9 +91,13 @@ prices_php <- list(
   ) |> 
   arrange(date)
 
+# Save a clean, peso-denominated data file for the deliverable
+prices_clean <- prices_php |>
+  select(date, USDPHP, BDO, ICT, SM, AAPL_PHP, MSFT_PHP, BTC_PHP, SPY_PHP)
+
 dir.create("data", showWarnings = FALSE)
-write.csv(prices_php, "data/prices.csv", row.names = FALSE)
-save(prices_php, file = "data/prices.RData")
+write.csv(prices_clean, "data/prices.csv", row.names = FALSE)
+save(prices_clean, file = "data/prices.RData")
 ```
 
 We also get the 91-day Treasury bill as the risk-free rate.
@@ -123,24 +127,26 @@ First we compute for daily log returns to get a simple overview of each asset's
 performance.
 
 ```{r}
-prices_php <- mutate(prices_php,
-                 BDO_return = log(BDO / lag(BDO, 1)),
-                 ICT_return = log(ICT / lag(ICT, 1)),
-                 SM_return = log(SM / lag(SM, 1)),
-                 AAPL_return = log(AAPL / lag(AAPL, 1)),
-                 MSFT_return = log(MSFT / lag(MSFT, 1)),
-                 BTC_return = log(`BTC-USD` / lag(`BTC-USD`, 1)),
-                 SPY_return = log(SPY / lag(SPY, 1)))
+prices_php <- prices_php |>
+              mutate(
+                BDO_return  = log(BDO / lag(BDO)),
+                ICT_return  = log(ICT / lag(ICT)),
+                SM_return   = log(SM / lag(SM)),
+                AAPL_return = log(AAPL_PHP / lag(AAPL_PHP)),
+                MSFT_return = log(MSFT_PHP / lag(MSFT_PHP)),
+                BTC_return  = log(BTC_PHP / lag(BTC_PHP)),
+                SPY_return  = log(SPY_PHP / lag(SPY_PHP))
+              )
 ```
 
 Then present the findings in a table for easier understanding.
 
 ```{r}
-findings_summary <- prices_php |>
-  select(date, BDO, ICT, SM, AAPL, MSFT, `BTC-USD`, SPY) |>
-  pivot_longer(-date, names_to = "asset", values_to = "price") |>
+rets_wide <- prices_php |> select(date, ends_with("_return")) |> na.omit()
+
+findings_summary <- rets_wide |>
+  pivot_longer(-date, names_to = "asset", values_to = "ret") |>
   group_by(asset) |>
-  mutate(ret = log(price / lag(price))) |>
   summarise(
     `Mean Daily Ret (%)` = mean(ret, na.rm = TRUE) * 100,
     `SD Daily Ret (%)`   = sd(ret, na.rm = TRUE) * 100,
@@ -279,11 +285,6 @@ eff_frontier <- map_dfr(target_rets, function(tr) {
 target_rets
 ```
 
-```{r}
-# !VISUALIZATION
-# efficient frontier
-```
-
 ### Global Minimum Variance Portfolio
 
 A Global Minimum Variance (GMV) Portfolio is a specialized asset mix built from a set of risky investments that achieves the lowest possible total risk or price volatility (variance). It sits at the absolute leftmost point of the efficient frontier curve in MPT.
@@ -310,6 +311,49 @@ max_sharpe_row <- eff_frontier |> slice_max(sharpe, n = 1)
 max_sharpe_weights <- max_sharpe_row$weights[[1]]
 
 knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))
+```
+
+We visualize the frontier together with the individual assets, the key
+portfolios, and the capital allocation line through the tangency point.
+
+```{r}
+# CML slope through the tangency (max-Sharpe) portfolio
+slope_cml <- (max_sharpe_row$ret - rf_annual) / max_sharpe_row$vol
+
+# Annualized points: assets, then the key portfolios
+asset_pts <- data.frame(
+  asset = assets,
+  ret   = colMeans(returns) * 252,
+  vol   = apply(returns, 2, sd) * sqrt(252)
+)
+
+eq_ret <- as.matrix(select(ret_data, ends_with("_return"))) %*% eq_weights
+
+key_pts <- rbind(
+  asset_pts,
+  data.frame(asset = "Equal Weight", ret = mean(eq_ret) * 252,  vol = sd(eq_ret) * sqrt(252)),
+  data.frame(asset = "GMV",          ret = gmv_ret,             vol = gmv_vol),
+  data.frame(asset = "Max Sharpe",   ret = max_sharpe_row$ret,  vol = max_sharpe_row$vol),
+  data.frame(asset = "SPY (PHP)",    ret = mean(rets_wide$SPY_return) * 252,
+                                     vol = sd(rets_wide$SPY_return) * sqrt(252))
+)
+
+eff_frontier |>
+  arrange(vol) |>                            # safe even with NULL unfeasible gaps
+  ggplot(aes(vol, ret)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_abline(intercept = rf_annual, slope = slope_cml,
+              linetype = "dashed", color = "grey45") +
+  geom_point(data = key_pts, aes(color = asset), shape = 21, size = 3,
+             fill = "white", stroke = 0.8) +
+  geom_text(data = key_pts, aes(label = asset, color = asset),
+            hjust = -0.1, vjust = -0.6, size = 3) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Efficient frontier with capital allocation line",
+       subtitle = paste0("Risk-free rate = ", round(rf_annual * 100, 2), "%"),
+       x = "Annualized volatility", y = "Annualized return") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, max(key_pts$vol, eff_frontier$vol) * 1.25))
 ```
 
 ## Cross-Portfolio Visualizations
