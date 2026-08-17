@@ -493,7 +493,6 @@ data.frame(stress_results |> mutate(across(where(is.numeric), ~ scales::percent(
 ```
 
 ## Descriptive Statistics
-## Visualization
 
 # Executive Recommendation
 
