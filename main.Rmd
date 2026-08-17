@@ -179,7 +179,7 @@ data.frame(Asset = assets, `Annual Return (%)` = round(mu * 100, 2), check.names
 ```
 
 To see the effects of optimization on our portfolio, we create a baseline of a 
-a simple equal weighted portfolio, with anf without rebalancing. This baseline gives us something to 
+a simple equal weighted portfolio, with and without re-balancing. This baseline gives us something to 
 compare our optimized portfolios against.
 
 ```{r}
@@ -210,7 +210,7 @@ portfolio_growth <- function(weights, ret_df = ret_data, rebalance = FALSE) {
 }
 ```
 
-We rebalance because prices move and starts pulling the actual portfolio away from that optimum.
+We re-balance because prices move and starts pulling the actual portfolio away from that optimum.
 Over time, some assets grow faster than others which can shift the target mix and exposes the assets to 
 more risk than planned.
 
@@ -227,7 +227,7 @@ Lastly, we initialize equal weighing among the assets and call `portfolio_growth
 # Portfolio Optimization
 
 With the return matrix and baseline established, we now solve for the three portfolios, the Efficient Frontier, the Global
-Minimum Variance (GMV) Portfolio, and the Maximum Sharpe Portfolio. We use the `quadprog` (quadratic programming) library to help with portfolio optimization. In general, these 3 techniques or theories all aim to achieve a singular goal, that being how to best balance or optimze the ratio
+Minimum Variance (GMV) Portfolio, and the Maximum Sharpe Portfolio. We use the `quadprog` (quadratic programming) library to help with portfolio optimization. In general, these 3 techniques or theories all aim to achieve a singular goal, that being how to best balance or optimize the ratio
 of returns given risks in its own way.
 
 ### Efficient Frontier
