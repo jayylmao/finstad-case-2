@@ -373,7 +373,7 @@ against.</p>
 <div id="setup" class="section level1">
 <h1>Setup</h1>
 <p>Initialize packages.</p>
-<pre class="r"><code>pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog)</code></pre>
+<pre class="r"><code>pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog, PerformanceAnalytics, xts, flextable)</code></pre>
 </div>
 <div id="data-acquisition" class="section level1">
 <h1>Data Acquisition</h1>
@@ -413,13 +413,6 @@ Sys.sleep(1); sm  &lt;- pse_pull(599, 520); Sys.sleep(1)
 # Pull USD/PHP exchange rate
 fx &lt;- yahoo_pull(&quot;USDPHP=X&quot;, start = DATE_FROM, end = DATE_TO) |&gt; 
   rename(USDPHP = `USDPHP=X`)
-
-prices &lt;- list(
-  BDO = bdo |&gt; rename(BDO = CLOSE),
-  ICT = ict |&gt; rename(ICT = CLOSE),
-  SM  = sm  |&gt; rename(SM = CLOSE),
-  AAPL = yahoo_pull(&quot;AAPL&quot;), MSFT = yahoo_pull(&quot;MSFT&quot;), BTC = yahoo_pull(&quot;BTC-USD&quot;), SPY = yahoo_pull(&quot;SPY&quot;)
-) |&gt; reduce(inner_join, by = &quot;date&quot;) |&gt; arrange(date)
 
 # Combine and convert USD assets to PHP
 prices_php &lt;- list(
@@ -541,12 +534,12 @@ print(n_assets)</code></pre>
 <pre><code>## [1] 6</code></pre>
 <pre class="r"><code>print(head(returns))</code></pre>
 <pre><code>##            BDO          ICT           SM         AAPL         MSFT         BTC
-## 2  0.006472515  0.041437190  0.011483380 -0.009769239 -0.012530295  0.05017175
+## 2  0.006472515  0.041437190  0.011483380 -0.009769239 -0.012529636  0.05017175
 ## 3  0.000000000 -0.003696862 -0.010521379  0.007936964  0.002581716  0.05616561
 ## 4  0.000000000 -0.018692133  0.025630259 -0.004714503 -0.009159971  0.04952690
 ## 5 -0.019544596 -0.005297023 -0.011310205  0.015958359  0.015803342 -0.01032167
 ## 6  0.000000000  0.016554178  0.015985296  0.021018084  0.012415292 -0.02516485
-## 7  0.006557401 -0.011257155  0.006508624  0.002259055 -0.004638100  0.03583702</code></pre>
+## 7  0.006557401 -0.011257155  0.006508624  0.002259055 -0.004637444  0.03583702</code></pre>
 <p>We annualize the mean return vector and covariance matrix, since all
 our optimization and risk targets are expressed on an annual basis.</p>
 <pre class="r"><code>#expected return vector
@@ -564,8 +557,8 @@ data.frame(Asset = assets, `Annual Return (%)` = round(mu * 100, 2), check.names
 ## MSFT  MSFT             23.36
 ## BTC    BTC             50.76</code></pre>
 <p>To see the effects of optimization on our portfolio, we create a
-baseline of a a simple equal weighted portfolio, with anf without
-rebalancing. This baseline gives us something to compare our optimized
+baseline of a a simple equal weighted portfolio, with and without
+re-balancing. This baseline gives us something to compare our optimized
 portfolios against.</p>
 <pre class="r"><code>portfolio_growth &lt;- function(weights, ret_df = ret_data, rebalance = FALSE) {
   dates &lt;- ret_df$date
@@ -592,7 +585,7 @@ portfolios against.</p>
 
   tibble(date = dates, value = port_value)
 }</code></pre>
-<p>We rebalance because prices move and starts pulling the actual
+<p>We re-balance because prices move and starts pulling the actual
 portfolio away from that optimum. Over time, some assets grow faster
 than others which can shift the target mix and exposes the assets to
 more risk than planned.</p>
@@ -612,7 +605,7 @@ three portfolios, the Efficient Frontier, the Global Minimum Variance
 <code>quadprog</code> (quadratic programming) library to help with
 portfolio optimization. In general, these 3 techniques or theories all
 aim to achieve a singular goal, that being how to best balance or
-optimze the ratio of returns given risks in its own way.</p>
+optimize the ratio of returns given risks in its own way.</p>
 <div id="efficient-frontier" class="section level3">
 <h3>Efficient Frontier</h3>
 <p>The efficient frontier is a core concept in Modern Portfolio Theory
@@ -780,6 +773,97 @@ knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))<
 </div>
 <div id="portfolio-risk-assessment" class="section level1">
 <h1>Portfolio Risk Assessment</h1>
+<p>Having constructed the Equal-Weight, GMV, and Maximum Sharpe
+portfolios, this section will assess how each portfolio handles risk
+based on,</p>
+<ul>
+<li>Risk evaluation</li>
+<li>Descriptive statistics per portfolio</li>
+<li>Visualizations</li>
+</ul>
+<div id="risk-evaluation" class="section level2">
+<h2>Risk Evaluation</h2>
+<p>Here we focus on computing risk management techniques, specifically
+Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo
+Simulation, and Stress Testing.</p>
+<p>We first compute a daily portfolio return series for each portfolio,
+this would act as the raw input for each measure.</p>
+<pre class="r"><code>eq_weights &lt;- rep(1 / n_assets, n_assets)
+
+port_returns &lt;- tibble(
+  date = ret_data$date,
+  `Equal-Weight` = as.numeric(returns %*% eq_weights),
+  `GMV` = as.numeric(returns %*% gmv_weights),
+  `Max Sharpe` = as.numeric(returns %*% max_sharpe_weights)
+)
+
+#standard confidence level
+conf_level &lt;- 0.95 </code></pre>
+<div id="historical-var" class="section level4">
+<h4>Historical VaR</h4>
+<pre class="r"><code>historical_var &lt;- port_returns |&gt;
+  summarise(across(
+    c(`Equal-Weight`, GMV, `Max Sharpe`),
+    ~ -quantile(.x, probs = 1 - conf_level, na.rm = TRUE)
+  ))
+
+
+data.frame(Portfolio = names(historical_var),
+            `Daily Historical VaR (95%)` = round(as.numeric(historical_var), 4),
+            check.names = FALSE)</code></pre>
+<pre><code>##      Portfolio Daily Historical VaR (95%)
+## 1 Equal-Weight                     0.0210
+## 2          GMV                     0.0193
+## 3   Max Sharpe                     0.0253</code></pre>
+</div>
+<div id="parametric-var" class="section level4">
+<h4>Parametric VaR</h4>
+<pre class="r"><code>z_score &lt;- qnorm(1 - conf_level)
+
+parametric_var &lt;- port_returns |&gt;
+  summarise(across(
+    c(`Equal-Weight`, GMV, `Max Sharpe`),
+    ~ -(mean(.x, na.rm = TRUE) + z_score * sd(.x, na.rm = TRUE))
+  ))
+
+data.frame(Portfolio = names(parametric_var),
+            `Daily Parametric VaR (95%)` = round(as.numeric(parametric_var), 4),
+            check.names = FALSE)</code></pre>
+<pre><code>##      Portfolio Daily Parametric VaR (95%)
+## 1 Equal-Weight                     0.0242
+## 2          GMV                     0.0219
+## 3   Max Sharpe                     0.0277</code></pre>
+</div>
+<div id="expected-shortfall-cvar" class="section level4">
+<h4>Expected Shortfall (CVaR)</h4>
+<pre class="r"><code>expected_shortfall &lt;- port_returns |&gt;
+  summarise(across(
+    c(`Equal-Weight`, GMV, `Max Sharpe`),
+    ~ -mean(.x[.x &lt;= quantile(.x, probs = 1 - conf_level, na.rm = TRUE)], na.rm = TRUE)
+  ))
+
+
+data.frame(Portfolio = names(expected_shortfall),
+            `Daily Expected Shortfall (95%)` = round(as.numeric(expected_shortfall), 4),
+            check.names = FALSE)</code></pre>
+<pre><code>##      Portfolio Daily Expected Shortfall (95%)
+## 1 Equal-Weight                         0.0358
+## 2          GMV                         0.0320
+## 3   Max Sharpe                         0.0406</code></pre>
+</div>
+<div id="monte-carlo-simulation" class="section level4">
+<h4>Monte Carlo Simulation</h4>
+</div>
+<div id="stress-testing" class="section level4">
+<h4>Stress Testing</h4>
+</div>
+</div>
+<div id="descriptive-statistics" class="section level2">
+<h2>Descriptive Statistics</h2>
+</div>
+<div id="visualization" class="section level2">
+<h2>Visualization</h2>
+</div>
 </div>
 <div id="executive-recommendation" class="section level1">
 <h1>Executive Recommendation</h1>
