@@ -615,7 +615,7 @@ gmv_vol <- as.numeric(sqrt(t(gmv_weights) %*% Sigma %*% gmv_weights))
 data.frame(Weight = round(gmv_weights, 4))
 ```
 
-<add later>
+Unlike Max Sharpe below, GMV's weights are driven purely by risk reduction, return never enters its objective function. The result is a portfolio that leans heavily into the three Philippine stocks (BDO, ICT, and SM), since Section 2's covariance matrix showed these three carry comparatively low covariance with the AAPL/MSFT/BTC cluster, giving the optimizer a genuine diversification benefit even though BDO and SM had negative average returns on their own. BTC, despite its high expected return, is held at a near-zero weight given how much it would add to overall portfolio variance, while AAPL and MSFT receive smaller allocations than the Philippine names since their near-perfect correlation with each other and with SPY means holding both adds volatility without a matching reduction in risk. This risk-only logic is precisely why GMV's variance-minimizing weights end up looking so different from the return-seeking allocation of Max Sharpe below, and it foreshadows why GMV is not uniformly the "safest" portfolio once we get to stress testing in Section 5.
 
 ## Maximum Sharpe Portfolio
 A Maximum Sharpe Portfolio is the optimal asset allocation on the efficient frontier that delivers the highest possible excess return per unit of total risk (volatility).
@@ -675,30 +675,33 @@ SM and BDO notably fall vastly below the efficient frontier; an investor taking 
 
 ## Cross-Portfolio Visualizations
 
-#### Figure 4.2: Historical Price Plot
+Section 2 already visualized prices, returns, and correlation at the individual-asset level, so the visualizations below instead look at the three constructed strategies (Equal-Weight, GMV, and Max Sharpe) as portfolios in their own right. Since none of the three has a price series pulled directly, we first build each strategy's own daily return series from the asset-level `returns` matrix and its respective weights.
 
-This reuses the indexed price series built in Figure 2.1, since a historical price plot and an indexed price trend are the same underlying chart, with prices rebased to 100 so that a PHP-denominated PSE stock, a PHP-converted US stock, and PHP-converted BTC can sit on one axis.
 ```{r}
-ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
-  geom_line(linewidth = 0.7, na.rm = TRUE) +
-  labs(
-    title = "Historical Price Plot (Indexed, Base = 100, Jan 2020)",
-    x = "Date",
-    y = "Indexed Price"
-  ) +
-  theme_minimal()
+port_returns <- tibble(
+  date = ret_data$date,
+  `Equal-Weight` = as.numeric(returns %*% eq_weights),
+  `GMV` = as.numeric(returns %*% gmv_weights),
+  `Max Sharpe` = as.numeric(returns %*% max_sharpe_weights)
+)
+
+port_returns_long <- port_returns |>
+  tidyr::pivot_longer(-date, names_to = "portfolio", values_to = "return")
+
+data.frame(head(port_returns))
 ```
 
+A separate per-portfolio indexed price plot is not needed here, Figure 4.5 below already shows each strategy's cumulative growth path, which is the portfolio-level equivalent of the indexed price plot in Figure 2.1.
 
-#### Figure 4.3: Daily Return Plot
+#### Figure 4.2: Daily Return Plot
 
-Figure 2.2 shows the *distribution* of daily returns as a histogram; this is a different chart that plots each asset's daily return series across time instead, making volatility clustering and crash periods visible directly rather than only summarized as a shape.
+Figure 2.2 and Figure 2.3 covered the *distribution* and rolling volatility of daily returns per asset; this chart instead plots each **portfolio's** daily return series across time, making it possible to see directly whether GMV's return path actually looks calmer day-to-day than Equal-Weight and Max Sharpe's, rather than inferring it from the six separate asset panels.
 ```{r}
-ggplot(returns_long_viz, aes(x = date, y = return, color = asset)) +
+ggplot(port_returns_long, aes(x = date, y = return, color = portfolio)) +
   geom_line(alpha = 0.7, linewidth = 0.3, na.rm = TRUE) +
-  facet_wrap(~asset, scales = "free_y", ncol = 2) +
+  facet_wrap(~portfolio, ncol = 1) +
   labs(
-    title = "Daily Return Plot by Asset",
+    title = "Daily Return Plot by Portfolio",
     x = "Date",
     y = "Daily Return"
   ) +
@@ -706,23 +709,36 @@ ggplot(returns_long_viz, aes(x = date, y = return, color = asset)) +
   theme(legend.position = "none")
 ```
 
-#### Figure 4.4: Correlation Heatmap
+With all three portfolios plotted on the same y-axis, the chart makes the volatility ordering from the descriptive statistics table directly visible day-by-day rather than compressed into a single number. The Equal-Weight and Max Sharpe panels both show a materially larger spike around the March 2020 crash and continue showing taller day-to-day swings through the rest of the sample, while the GMV panel stays visibly more compressed around zero throughout. This tracks Max Sharpe's larger BTC and ICT/AAPL allocations, both of which amplify single-day moves, against GMV's heavier, more diversified Philippine-stock tilt. It's the same story as GMV's 1.35% daily standard deviation versus Max Sharpe's 1.74% from the Portfolio Descriptive Statistics table in Section 5, just made visible as a return path instead of a summary statistic.
 
-This reuses the correlation heatmap already built in Figure 2.4, placed here as well so that every required cross-portfolio visualization lives together in this section.
+#### Figure 4.3: Correlation Heatmap
+
+Figure 2.4 showed how the six individual assets correlate with one another. Since all three portfolios are built from overlapping subsets of the same six assets, this chart instead shows how correlated the three **portfolios'** return series are with each other, which is a useful check on how much genuine diversification the optimization actually bought us versus how much the three strategies just move together.
 ```{r}
-ggplot(corr_df, aes(x = asset1, y = asset2, fill = correlation)) +
+port_corr_matrix <- port_returns |>
+  select(-date) |>
+  cor(use = "complete.obs")
+
+port_corr_df <- as.data.frame(port_corr_matrix) |>
+  tibble::rownames_to_column("portfolio1") |>
+  tidyr::pivot_longer(-portfolio1, names_to = "portfolio2", values_to = "correlation")
+
+ggplot(port_corr_df, aes(x = portfolio1, y = portfolio2, fill = correlation)) +
   geom_tile(color = "white") +
   geom_text(aes(label = round(correlation, 2)), size = 3.5) +
-  scale_fill_gradient2(low = "steelblue", mid = "white", high = "firebrick", midpoint = 0) +
+  scale_fill_gradient2(low = "steelblue", mid = "white", high = "firebrick",
+                        midpoint = 0, limits = c(-1, 1)) +
   labs(
-    title = "Correlation Heatmap of Daily Returns",
+    title = "Correlation Heatmap of Portfolio Returns",
     x = NULL,
     y = NULL
   ) +
   theme_minimal()
 ```
 
-#### Figure 4.5: Portfolio Allocation
+The three portfolios are all fairly highly correlated with one another (0.78–0.92), which isn't surprising since they're built from overlapping weights on the same six assets rather than independent bets, a 3-portfolio correlation matrix will never show the kind of spread the 7-asset heatmap in Figure 2.4 did. What the heatmap does surface is that GMV and Max Sharpe are the least correlated pair of the three at 0.78, noticeably lower than Equal-Weight's correlation with either one (0.89 and 0.92). That's consistent with where each sits on the efficient frontier: GMV and Max Sharpe are the two extreme points, minimum variance versus maximum Sharpe, so their return series get pulled in the most different directions, while Equal-Weight sits in between and ends up moving with both. It's also a useful sanity check on Section 4's optimization results, if GMV and Max Sharpe had come back correlated at or near 1.0, that would have suggested the optimizer wasn't actually finding meaningfully different portfolios.
+
+#### Figure 4.4: Portfolio Allocation
 
 This chart compares how each of the three portfolio strategies (Equal Weight, GMV, Max Sharpe) splits its weight across the 6 assets, making the optimization results from the previous section directly visible side by side rather than as three separate tables.
 ```{r}
@@ -744,7 +760,7 @@ ggplot(alloc_df, aes(x = asset, y = weight, fill = portfolio)) +
   theme_minimal()
 ```
 
-#### Figure 4.6: Optimized Portfolio Growth Comparison
+#### Figure 4.5: Optimized Portfolio Growth Comparison
 
 `portfolio_growth()` was only called on the equal-weight portfolio earlier (`eq_no_rebal`, `eq_rebal`). Before this chart can compare all three strategies, the GMV and Max Sharpe portfolios need their own growth paths computed the same way, with and without monthly rebalancing.
 ```{r}
@@ -781,26 +797,46 @@ ggplot(all_growth, aes(x = date, y = value, color = portfolio)) +
 
 # 5. Portfolio Risk Assessment
 
-Having constructed the Equal-Weight, GMV, and Maximum Sharpe portfolios, this section will assess how
-each portfolio handles risk based on risk measurements and its correlated visualizations
+Having constructed the Equal-Weight, GMV, and Maximum Sharpe portfolios, this section evaluates each one across three angles: descriptive statistics per portfolio, formal risk evaluation, and supporting visualizations.
 
-We first focus on computing risk management techniques, specifically Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo Simulation, and Stress Testing. 
+We start with descriptive statistics for each portfolio's daily return series, mirroring the per-asset descriptive statistics from Section 2, but now applied to the three constructed portfolios instead of the six individual assets. We then move into formal risk management techniques, specifically Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo Simulation, and Stress Testing, each paired with a supporting visualization.
 
-We thus compute a daily portfolio return series for each portfolio, this would act as the raw input for each measure. 
+The daily portfolio return series used throughout this section, `port_returns`, was already assembled in Section 4 alongside the cross-portfolio visualizations, so we simply reuse it here as the raw input for every measure below, along with a standard 95% confidence level.
 
 ```{r}
-eq_weights <- rep(1 / n_assets, n_assets)
-
-port_returns <- tibble(
-  date = ret_data$date,
-  `Equal-Weight` = as.numeric(returns %*% eq_weights),
-  `GMV` = as.numeric(returns %*% gmv_weights),
-  `Max Sharpe` = as.numeric(returns %*% max_sharpe_weights)
-)
-
-#standard confidence level
 conf_level <- 0.95 
 ```
+
+## Portfolio Descriptive Statistics
+
+Just as Section 2 profiled each asset's daily returns individually, we profile each portfolio's daily returns here, this shows how much the optimization step actually changed the portfolio's risk-return profile relative to naive equal weighting, ahead of the formal risk measures below.
+
+```{r}
+port_summary <- port_returns |>
+  tidyr::pivot_longer(-date, names_to = "portfolio", values_to = "ret") |>
+  group_by(portfolio) |>
+  summarise(
+    `Mean Daily Ret (%)` = mean(ret, na.rm = TRUE) * 100,
+    `SD Daily Ret (%)`   = sd(ret, na.rm = TRUE) * 100,
+    `Ann. Ret (%)`       = mean(ret, na.rm = TRUE) * 252 * 100,
+    `Ann. Vol (%)`       = sd(ret, na.rm = TRUE) * sqrt(252) * 100,
+    Sharpe               = (mean(ret, na.rm = TRUE) * 252 - rf_annual) /
+                           (sd(ret, na.rm = TRUE) * sqrt(252)),
+    `Max Drawdown (%)`   = { r <- ret[!is.na(ret)];
+                       min(cumprod(1 + r) / cummax(cumprod(1 + r)) - 1) * 100 }
+  ) |>
+  ungroup()
+
+data.frame(port_summary)
+```
+
+**Relevant Implications/Observations**
+
+- Max Sharpe reports the highest Sharpe ratio of the three by construction, since its weights were explicitly solved to maximize exactly this statistic; Equal-Weight, which ignores both risk and the covariance structure entirely, comes out with the lowest.
+- GMV's daily and annualized volatility are the lowest of the three, by construction, since minimizing variance is the entirety of its objective function; this same lower volatility is what produces its lower Historical and Parametric VaR figures later in this section.
+- Max Sharpe's higher mean daily and annualized return comes paired with higher volatility than GMV, the same risk-return trade-off visible along the efficient frontier in Section 4: the extra return is compensation for extra risk taken on, not a free improvement.
+- The volatility ordering tends to carry over into max drawdown as well, with GMV typically recording the shallowest peak-to-trough decline over the sample period and Max Sharpe the deepest.
+- These portfolio-level statistics tell the same story as the individual-asset statistics in Section 2, just filtered through each strategy's weighting scheme: variance-minimization compresses volatility and drawdown at GMV, while return-seeking weighting concentrates in higher-return, higher-volatility assets at Max Sharpe.
 
 ## Historical VaR
 Historical value at risk is a simple non-parametric approach towards estimating  a portfolio’s maximum loss through simply sorting the portfolio’s actual daily returns from worst to best. It then assumes that history will repeat itself as far as the portfolio’s risk is concerned. 
@@ -885,7 +921,7 @@ ggplot(var_comparison, aes(x = Portfolio, y = value, fill = Method)) +
        x = NULL, y = "Daily Loss (95% Confidence)", fill = NULL) +
   scale_y_continuous(labels = scales::percent) + theme_minimal()
 ```
-<add later>
+Figure 5.1 puts all three risk measures side by side for each portfolio, and the pattern is consistent across every method: GMV's bars are the shortest, Max Sharpe's are the tallest, and Equal-Weight sits in between, regardless of whether the measure is Historical VaR, Parametric VaR, or CVaR. The chart also makes the CVaR gap visually obvious, for each portfolio, the Expected Shortfall bar clears both VaR bars by a wide margin, illustrating that the loss conditional on breaching the 95% threshold is meaningfully larger than the threshold itself. That the ranking of the three portfolios never flips across methods is the more important takeaway: it means the choice of risk measure doesn't change which portfolio looks riskier, only by how much.
 
 ## Monte Carlo Simulation
 The Monte Carlo simulation is a model used to predict various probabilities of multiple possible random outcomes, this is especially useful in understanding the impact of risk and uncertainty (Kenton, 2026). Rather than relying on the assumption of a normal distribution or historical points, Monte Carlo generates thousands of paths of possible future return. These simulations rely on historical data and statistical assumptions about market behavior to keep random behaviour consistent with the portfolio’s risk profile.
@@ -932,7 +968,7 @@ bind_rows(
        x = "Daily Return", y = "Density", fill = NULL) + theme_minimal()
 ```
 
-<add later>
+Figure 5.2 overlays GMV's actual historical return distribution against the simulated Monte Carlo distribution, which by construction is a normal curve centered on the portfolio's historical mean and standard deviation. The two densities overlap closely around the center of the distribution, which is why the Monte Carlo VaR and CVaR figures above land so close to their parametric counterparts. The clearest divergence sits in the left tail, where the historical density shows a slightly heavier and longer tail than the symmetric Monte Carlo curve. This mirrors the negative skewness found across the individual assets back in Section 2: GMV's real-world losses are somewhat more prone to extreme single-day drops than a normal-distribution assumption alone would suggest, meaning parametric and Monte Carlo VaR are useful approximations but likely understate true left-tail risk.
 
 ## Stress Testing
 VaR, CVaR, and Monte Carlo simulations all describe outcomes based on statistical likelihood, stress testing applies hypothetical market stress scenarios to  test and evaluate the result of a single day potential loss per portfolio. The loss was calculated as a weighted sum of asset returns influenced by the scenario stress. 
@@ -1010,7 +1046,7 @@ stress_results |>
   scale_y_continuous(labels = scales::percent,
                       limits = c(-max_abs, max_abs)) + theme_minimal()
 ```
-<add later>
+Figure 5.3 lays all five scenarios out on one chart, and the pattern that emerges qualifies the "GMV is safest" conclusion drawn from the VaR, CVaR, and Monte Carlo sections above. GMV only pulls clearly ahead of the other two portfolios in the BTC crash scenario, where its near-zero crypto exposure protects it almost entirely; in the Philippine selloff scenario, that same concentration works against it, and GMV actually posts the worst loss of the three. Max Sharpe and Equal-Weight, by contrast, are more evenly exposed across scenarios, neither dominates nor lags dramatically regardless of which market segment is shocked. The overall implication for the recommendation below is that "lowest risk" depends on which risk is being asked about: GMV minimizes day-to-day statistical variance, but its concentration in Philippine equities leaves it exposed to a scenario-specific risk that VaR, CVaR, and Monte Carlo, all built from the same historical return distribution, would not have flagged on their own.
 
 # 6. Executive Recommendation
 
