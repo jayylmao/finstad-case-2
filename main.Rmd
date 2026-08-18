@@ -621,7 +621,7 @@ A Maximum Sharpe Portfolio is the optimal asset allocation on the efficient fron
 max_sharpe_row <- eff_frontier |> slice_max(sharpe, n = 1)
 max_sharpe_weights <- max_sharpe_row$weights[[1]]
 
-knitr::kable(data.frame(Asset = assets, Weight = round(max_sharpe_weights, 4)))
+knitr::kable(data.frame(Weight = round(max_sharpe_weights, 4)))
 ```
 
 We visualize the frontier together with the individual assets, the key
