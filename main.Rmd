@@ -1,7 +1,7 @@
 ---
 title: "Case 2 - Portfolio Management and Risk Consultation"
 output: html_document
-date: "2026-08-14"
+date: "2026-08-19"
 ---
 ## Group Alpha
 
@@ -15,7 +15,7 @@ containing a mixture of assets, specifically the Philippine stocks BDO, ICT, and
 the international stocks AAPL and MSFT, and the cryptocurrency BTC. We use SPY
 as the primary benchmark to compare against.
 
-# Setup
+# 1. Setup
 
 Initialize packages.
 
@@ -23,13 +23,14 @@ Initialize packages.
 pacman::p_load(dplyr, ggplot2, quantmod, tidyverse, tidyquant, lubridate, readxl, timetk, zoo, httr, jsonlite, quadprog, PerformanceAnalytics, xts, flextable)
 ```
 
+We set a constant random seed value for any needed data modeling.
 ```{r}
 RANDOM_SEED <- 42
 ```
 
-# Data Acquisition
+# 2. Data Acquisition
 
-First, we pull the ticker data from Yahoo! Finance and PSE Edge.
+First, we pull the ticker data from Yahoo! Finance and PSE Edge, and set our time period.
 ```{r}
 DATE_FROM <- "2020-01-02"
 DATE_FROM_MDY <- "01-02-2020"
@@ -121,7 +122,7 @@ rf_annual <- mean(tbill91_pct) / 100           # ~4% expected
 rf_daily  <- (1 + rf_annual)^(1 / 252) - 1     # use in Sharpe / frontier
 ```
 
-# Exploratory Financial Analysis
+# 2. Exploratory Financial Analysis
 
 First we compute for daily log returns to get a simple overview of each asset's
 performance.
@@ -160,7 +161,7 @@ findings_summary <- rets_wide |>
   ungroup()
 
 
-print(findings_summary)
+data.frame(findings_summary)
 ```
 
 
@@ -339,11 +340,13 @@ descriptive_table <- tibble(
   )
 )
 
-descriptive_table
+data.frame(descriptive_table)
 
 
 ```
-### Relevant Implications/Observations
+
+**Relevant Implications/Observations**
+
 - BTC has the greatest mean return among all the assets, which makes sense given its volatile nature as a cryptocurrency. On the other hand, BDO and SM have negative mean returns, showing that they tend to lose value on the average day. The remaining assets (ICT, SM, MSFT) all have means within the same range that are greater than SPY's mean returns.
 - AAPL, MSFT, BTC, and SPY all have positive median returns, while BDO, ICT, and SM all have median returns of 0. This aligns with their low mean returns.
 - BTC is also the most volatile asset, as seen in its significantly higher standard deviation and variance relative to the other assets. In contrast, SPY is the most stable or least volatile option, making it a good benchmark to compare against the other assets.
@@ -352,24 +355,24 @@ descriptive_table
 - All 7 assets have a negative skewness, indicating that they are more prone to large crashes rather than small dips over time. BDO, SM, and SPY all have especially low skewness values.
 - All 7 assets have a positive kurtosis, which means they all have a decent likelihood to have extreme outliers. BDO and BTC having especially high values, supported by their high volatility.
 
-### Correlation Matrix
+#### Correlation Matrix
 
 ```{r}
 correlation_matrix <- returns_tbl  |> 
   select(-date)  |> 
   cor(use = "complete.obs")
-correlation_matrix
 
+data.frame(correlation_matrix)
 ```
 While the correlation between the assets is generally fairly low, AAPL and MSFT show an extremely high correlation with SPY, and with each other. This makes sense as AAPL and MSFT are both giants in the tech industry, with similar products and markets. BDO, ICT, and SM also display a moderate correlation at around 0.3-0.4 correlation with each other. While they are not as closely related as AAPL and MFST in terms of the industry they are a part of, the three being Philippine companies means they follow the country's general economic trends rather than U.S. trends. Another notable observation is that BTC also shares a similar level of correlation (0.3-0.4) with MSFT, AAPL, and SPY.
 
-### Covariation Matrix
+#### Covariance Matrix
 ```{r}
 covariance_matrix <- returns_tbl |> 
   select(-date)  |> 
   cov(use = "complete.obs")
-covariance_matrix
 
+data.frame(covariance_matrix)
 ```
 The strong correlation between AAPL and MSFT carries over into the covariance matrix, with the two assets sharing the highest covariance score with each other. Similarly solid covariance scores between BTC, AAPL, MSFT, and SPY all reflect previous insights found in the correlation matrix. When creating a portfolio, investing heavily in stocks such as AAPL and MSFT together may not add much diversification to it. While their performance is generally poorer, the low covariance between the Philippine stocks and the U.S. stocks means that they would be a stronger option for introducing diversity to a portfolio.
 
@@ -377,7 +380,7 @@ The strong correlation between AAPL and MSFT carries over into the covariance ma
 
 While descriptive stats offer good numerical insight into the data, visualization is needed to create a more complete exploratory financial analysis. Similar to the descriptive statistics section, the prices_php dataset is used as the base for every figure.
 
-### Figure 1: Indexed Price Trend 
+#### Figure 2.1: Indexed Price Trend 
 Raw prices aren’t directly comparable since the assets trade on completely different price scales. Re-basing each series to start at 100 lets us compare growth trajectories side by side.
 ```{r}
 indexed_prices <- prices_php|>
@@ -395,8 +398,7 @@ ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
   theme_minimal()
 ```
 
-
-### Figure 2 Daily Return Distribution
+#### Figure 2.2: Daily Return Distribution
 ```{r}
 returns_long_viz <-  prices_php|>
   select(date, BDO_return, ICT_return, SM_return, AAPL_return, MSFT_return, BTC_return, SPY_return) |>
@@ -413,7 +415,8 @@ ggplot(returns_long_viz, aes(x = return, fill = asset)) +
   theme_minimal() +
   theme(legend.position = "none")
 ```
-### Figure 3 30-Day Rolling Volatility
+
+#### Figure 2.3: 30-Day Rolling Volatility
 ```{r}
 rolling_vol <- prices_php |>
   arrange(date) |>
@@ -438,7 +441,8 @@ ggplot(rolling_vol, aes(x = date, y = rolling_vol, color = asset)) +
   ) +
   theme_minimal()
 ```
-### 4. Correlation Heatmap
+
+#### Figure 2.4: Correlation Heatmap
 ```{r}
 corr_df <- as.data.frame(correlation_matrix) |>
   tibble::rownames_to_column("asset1") |>
@@ -457,9 +461,7 @@ ggplot(corr_df, aes(x = asset1, y = asset2, fill = correlation)) +
 ```
 
 
-
-
-Comparing Results and Volatility Across Assets
+**Comparing Results and Volatility Across Assets**
 ```{r}
 return_vol_summary <- returns_long_viz |>
   group_by(asset) |>
@@ -471,10 +473,10 @@ return_vol_summary <- returns_long_viz |>
   ) |>
   arrange(desc(annualized_return))
 
-return_vol_summary
+data.frame(return_vol_summary)
 ```
 
-# Portfolio Construction
+# 3. Portfolio Construction
 
 We construct a portfolio using these 6 assets: BDO, ICT, SM, AAPL, MSFT, and BTC. 
 We start with building a returns matrix as each optimization technique (Efficient Frontier, 
@@ -493,7 +495,7 @@ colnames(returns) <- assets
 n_assets <- length(assets)
 
 print(n_assets)
-print(head(returns))
+data.frame(head(returns))
 ```
 
 We annualize the mean return vector and covariance matrix, since all our
@@ -555,13 +557,13 @@ eq_rebal <- portfolio_growth(eq_weights, rebalance = TRUE)  |> mutate(portfolio 
 
 Lastly, we initialize equal weighing among the assets and call `portfolio_growth()` to create paths with and without monthly rebalancing.
 
-# Portfolio Optimization
+# 4. Portfolio Optimization
 
 With the return matrix and baseline established, we now solve for the three portfolios, the Efficient Frontier, the Global
 Minimum Variance (GMV) Portfolio, and the Maximum Sharpe Portfolio. We use the `quadprog` (quadratic programming) library to help with portfolio optimization. In general, these 3 techniques or theories all aim to achieve a singular goal, that being how to best balance or optimize the ratio
 of returns given risks in its own way.
 
-### Efficient Frontier
+## Efficient Frontier
 
 The efficient frontier is a core concept in Modern Portfolio Theory (MPT) introduced by Harry Markowitz in 1952. It is a curved line on a graph that shows the best investment portfolios, these portfolios give the highest expected return for a set level of risk, or the lowest risk for a set level of return.
 
@@ -593,10 +595,9 @@ eff_frontier <- map_dfr(target_rets, function(tr) {
   )
 })
 
-target_rets
 ```
 
-### Global Minimum Variance Portfolio
+## Global Minimum Variance Portfolio
 
 A Global Minimum Variance (GMV) Portfolio is a specialized asset mix built from a set of risky investments that achieves the lowest possible total risk or price volatility (variance). It sits at the absolute leftmost point of the efficient frontier curve in MPT.
 
@@ -611,19 +612,24 @@ gmv_weights <- setNames(gmv_sol$solution, assets)
 gmv_ret <- sum(gmv_weights * mu)
 gmv_vol <- as.numeric(sqrt(t(gmv_weights) %*% Sigma %*% gmv_weights))
 
-knitr::kable(data.frame(Weight = round(gmv_weights, 4)))
+data.frame(Weight = round(gmv_weights, 4))
 ```
 
-### Maximum Sharpe Portfolio
+<add later>
+
+## Maximum Sharpe Portfolio
 A Maximum Sharpe Portfolio is the optimal asset allocation on the efficient frontier that delivers the highest possible excess return per unit of total risk (volatility).
 
 ```{r}
 max_sharpe_row <- eff_frontier |> slice_max(sharpe, n = 1)
 max_sharpe_weights <- max_sharpe_row$weights[[1]]
 
-knitr::kable(data.frame(Weight = round(max_sharpe_weights, 4)))
+data.frame(Weight = round(max_sharpe_weights, 4))
 ```
 
+The Maximum Sharpe portfolio notably excludes BDO and SM from the allocation, likely due to their poor returns given their volatility levels. ICT and AAPL are given the largest allocations thanks to their comparatively high returns for their volatility levels. BTC is given a more conservative allocation due to its high volatility, but not excluded due to its comparatively high returns. MSFT also gets a relatively conservative allocation due to its lower returns compared to ICT and AAPL.
+
+#### Figure 4.1: Efficient Frontier Chart
 We visualize the frontier together with the individual assets, the key
 portfolios, and the capital allocation line through the tangency point.
 
@@ -665,56 +671,51 @@ eff_frontier |>
   theme_minimal() +
   coord_cartesian(xlim = c(0, max(key_pts$vol, eff_frontier$vol) * 1.25))
 ```
+SM and BDO notably fall vastly below the efficient frontier; an investor taking on the risk that SM has would be much better off if they instead allocate that money to MSFT, as it provides a much higher return for the same risk. A similar observation can be made between BDO and ICT. However, holding a small allocation in these assets may still prove beneficial for diversification. These two securities are in vastly different industries compared to the others, which may be helpful when the other securities experience periods of drawdown. 
 
 ## Cross-Portfolio Visualizations
 
-### Historical Price Plot
+#### Figure 4.2: Historical Price Plot
 ```{r}
 # !VISUALIZATION
 # 
 ```
 
 
-### Daily Return Plot
+#### Figure 4.3: Daily Return Plot
 ```{r}
 # !VISUALIZATION
 # 
 ```
 
-### Correlation Heatmap
+#### Figure 4.4: Correlation Heatmap
 ```{r}
 # !VISUALIZATION
 # 
 ```
 
-### Portfolio Allocation
+#### Figure 4.5: Portfolio Allocation
 
 ```{r}
 # !VISUALIZATION
 # portfolio allocation
 ```
 
-### Optimized Portfolio Growth Comparison
+#### Figure 4.6: Optimized Portfolio Growth Comparison
 
 ```{r}
 # !VISUALIZATION
 # portfolio growth comparison (rebalances vs no rebalance per portoflio)
 ```
 
-# Portfolio Risk Assessment
+# 5. Portfolio Risk Assessment
 
 Having constructed the Equal-Weight, GMV, and Maximum Sharpe portfolios, this section will assess how
-each portfolio handles risk based on, 
+each portfolio handles risk based on risk measurements and its correlated visualizations
 
-- Risk evaluation
-- Descriptive statistics per portfolio
-- Visualizations
+We first focus on computing risk management techniques, specifically Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo Simulation, and Stress Testing. 
 
-## Risk Evaluation
-
-Here we focus on computing risk management techniques, specifically Historical VaR, Parametric VaR, Expected Shortfall (CVaR), Monte Carlo Simulation, and Stress Testing. 
-
-We first compute a daily portfolio return series for each portfolio, this would act as the raw input for each measure. 
+We thus compute a daily portfolio return series for each portfolio, this would act as the raw input for each measure. 
 
 ```{r}
 eq_weights <- rep(1 / n_assets, n_assets)
@@ -730,8 +731,10 @@ port_returns <- tibble(
 conf_level <- 0.95 
 ```
 
-#### Historical VaR
+## Historical VaR
+Historical value at risk is a simple non-parametric approach towards estimating  a portfolio’s maximum loss through simply sorting the portfolio’s actual daily returns from worst to best. It then assumes that history will repeat itself as far as the portfolio’s risk is concerned. 
 
+We compute historical VaR as the portoflio value multiplied against the quantile of the confidence score (1-a) 
 ```{r}
 historical_var <- port_returns |>
   summarise(across(
@@ -745,8 +748,14 @@ data.frame(Portfolio = names(historical_var),
             check.names = FALSE)
 ```
 
-#### Parametric VaR
+At a 95% confidence level, the GMV portfolio has the lowest historical VaR while maximum Sharpe has the highest, while the equal weighted portfolio sits in the middle of the 2. These can be read as the loss threshold of the 5% of worst trading days per portfolio. The values adequately align with each portfolio’s objective, GMV was explicitly optimized to minimize portfolio variance, hence translating to a tighter distribution creating smaller loss at any given percentile. On the other hand, maximum Sharpe was meant to optimize return per unit of risk, meaning the portfolio likely leans more towards higher expected returns which, in turn, results in higher volatility. Having a higher VaR is not necessarily bad, the extra risk should be judged to see if the risk to return trade-off is evenly compensated.
 
+
+## Parametric VaR
+
+Parametric value at risk uses mean-variance analysis and other statistical inferences based on past information to predict future outcomes. This measures potential financial losses by assuming portfolio returns fit a normal distribution.
+
+We compute parametric VaR by multiplying the portfolio value against (z-score * standard deviation - mean)
 ```{r}
 z_score <- qnorm(1 - conf_level)
 
@@ -762,8 +771,12 @@ data.frame(Portfolio = names(parametric_var),
 
 ```
 
-#### Expected Shortfall (CVaR) 
+The parametric VaR per portfolio follows a similar pattern to that of historical VaR, the GMV portfolio has the lowest parametric VaR while maximum Sharpe remains the highest. Across all 3 portfolios, parametric VaR consistently exceeds historical VaR by roughly 0.2–0.3 percentage values. This could indicate that the assumed normal distribution slightly overstates daily risk relative to what has been empirically observed. Because the difference is consistent among all portfolios, this could just be an effect of the sample period, especially considering the global events of the given time period.
 
+## Expected Shortfall (CVaR) 
+Given a less stable investment, standard VaR may not be sufficient to assess the full picture of the risks involved. CVaR represents the expected loss if the worst-case threshold of VaR is crossed, giving insight into what happens beyond the VaR breakpoint.
+
+We compute expected shortfall through the summation of individual portfolio returns multiplied by observational probability. 
 ```{r}
 expected_shortfall <- port_returns |>
   summarise(across(
@@ -777,7 +790,10 @@ data.frame(Portfolio = names(expected_shortfall),
             check.names = FALSE)
 
 ```
-**Risk Comparison per VaR**
+
+The GMV portfolio provides the best protection against market drops, as its entire purpose is to minimize risk. Max Sharpe trades this safety for returns, as shown earlier in section V. Relative to historical and parametric VaR, CVaR produces a higher risk value by about 45–48%, indicating that when market conditions breach the 95% confidence threshold covered by VaR, there is a significant tail risk that is underestimated by standard VaR.
+
+## Figure 5.1: Risk Comparison per VaR
 ```{r}
 var_comparison <- bind_rows(
   historical_var |>
@@ -798,10 +814,12 @@ ggplot(var_comparison, aes(x = Portfolio, y = value, fill = Method)) +
        x = NULL, y = "Daily Loss (95% Confidence)", fill = NULL) +
   scale_y_continuous(labels = scales::percent) + theme_minimal()
 ```
+<add later>
 
+## Monte Carlo Simulation
+The Monte Carlo simulation is a model used to predict various probabilities of multiple possible random outcomes, this is especially useful in understanding the impact of risk and uncertainty (Kenton, 2026). Rather than relying on the assumption of a normal distribution or historical points, Monte Carlo generates thousands of paths of possible future return. These simulations rely on historical data and statistical assumptions about market behavior to keep random behaviour consistent with the portfolio’s risk profile.
 
-#### Monte Carlo Simulation
-
+We setup the Monte Carlo with the stated `RANDOM_SEED` constant and a standard of 5000 simulations. `mu_p` and `sigma_p` represent the historical mean and standard deviation of the portfolio. 
 ```{r}
 set.seed(RANDOM_SEED)
 n_sim_val <- 5000
@@ -827,7 +845,9 @@ mc_results <- bind_rows(
 data.frame(mc_results |> mutate(across(c(VaR, ES), ~ round(.x, 4))))
 ```
 
-**Historical vs. Monte Carlo Distribution**
+The Monte Carlo simulations’ parametric VaR and CVaR maintain the same relative positions as those previously calculated on an individual outcome, where GMV has the lowest VaR and maximum Sharpe remaining the highest. Monte Carlo produces VaR estimates closely aligned with parametric VaR across all three portfolios, within 0.05–0.06 percentage values, which is expected given both methods share the same assumed normal distribution with some slight differences due to sampling noise. The Monte Carlo expected shortfall exceeds Monte Carlo VaR by 0.5–0.7 percentage values across portfolios, this is consistent with CVaR’s definition as the average loss beyond the VaR threshold. Lastly, the risk ordering of the 3 portfolios are consistent across all evaluated risk measures, indicating that GMV and maximum Sharpe remain as consistent findings
+
+#### Figure 5.2: Historical vs. Monte Carlo Distribution
 ```{r}
 sim_gmv <- rnorm(n_sim_val, mean = mean(port_returns$GMV, na.rm = TRUE),
                   sd = sd(port_returns$GMV, na.rm = TRUE))
@@ -841,8 +861,12 @@ bind_rows(
        x = "Daily Return", y = "Density", fill = NULL) + theme_minimal()
 ```
 
-#### Stress Testing
+<add later>
 
+## Stress Testing
+VaR, CVaR, and Monte Carlo simulations all describe outcomes based on statistical likelihood, stress testing applies hypothetical market stress scenarios to  test and evaluate the result of a single day potential loss per portfolio. The loss was calculated as a weighted sum of asset returns influenced by the scenario stress. 
+
+We take these 5 scenarios and assign its related weights to test the portfolios and assets on given shocks
 ```{r}
 stress_scenarios <- list(
   "Market-Wide Crash (-20%)"   = rep(-0.20, n_assets),
@@ -854,7 +878,10 @@ stress_scenarios <- list(
   "Global Equity Correction (-10% equities, BTC -25%)" =
     c(BDO = -0.10, ICT = -0.10, SM = -0.10, AAPL = -0.10, MSFT = -0.10, BTC = -0.25)
 )
+```
 
+We then calculate stress by multiplying the weights of each portofolio against the added stress to return a single day loss percentage value.
+```{r}
 stress_test <- function(weights, scenario) {
   sum(weights * scenario)
 }
@@ -872,7 +899,28 @@ stress_results <- map_dfr(names(stress_scenarios), function(scenario_name) {
 data.frame(stress_results |> mutate(across(where(is.numeric), ~ scales::percent(.x, accuracy = 0.1))))
 ```
 
-**Stress Testing Chart**
+**Market-Wide Crash of -20%**
+
+First, a market wide crash resulting in a -20.0% loss of all returns across portfolios is expected, regardless of how weights are distributed a -20.0% crash would result in all assets dropping by that same amount. This stress scenario serves as confirmation that calculated weights sum up to 1 over being a truly meaningful assessment of stress.
+	
+**BTC Crash of -50%**
+
+With BTC being the most volatile asset, it is weighed differently across each portfolio and proves to be reflective of each optimization’s objective. The GMV portfolio barely takes on any loss (-0.3%) as it holds almost no amount in BTC, while maximum Sharpe and the equal weighted portfolio have relatively the same amount of loss (-9.6% and -8.3%). This confirms expected portfolio performance, GMV avoided putting too much weight into BTC due to its high volatility, while maximum Sharpe leaned into BTC’s high expected returns relative to its risk.
+	
+**Philippine Market Selloff of -15%**
+
+To test the influence of the weight of local and international markets, a crash of -15.0% was done on the local market. GMV now performs the worst (-8.5%) despite having consistently been the safest portfolio, while maximum Sharpe performs the best with -5.5% in loss. This implies that GMV is too overweighted/biased towards Philippine equities relative to other portfolios, although the difference isn’t huge this implies lower historic volatility with Philippine stocks than international ones. 
+	
+**International Market Selloff of -15%**
+
+To further test the influence of the weight of local and international markets, a crash of -15.0% was done on the international market this time. The GMV and maximum Sharpe portfolios now show a nearly identical amount of loss (-6.5% and -6.6%) for an international market selloff. This further enforces that GMV’s risk profile concentrates more towards Philippine assets over foreign ones due to said low volatility. 
+	
+**Global Equity Correction**
+
+A combined shock of -10.0% and -25.0% in loss was done respectively on equities and BTC to illustrate what happens when shocks hit simultaneously both locally and internationally. Overall, GMV has a lower risk profile (-10.1%) relative to the other portfolios, but it is not significantly different against the equally weighted portfolio (-12.5%) despite its consistent lowest performance in the other tables. 
+
+
+#### Figure 5.3: Stress Testing Chart
 ```{r}
 max_abs <- stress_results |>
   pivot_longer(-Scenario, names_to = "Portfolio", values_to = "loss") |>
@@ -891,10 +939,9 @@ stress_results |>
   scale_y_continuous(labels = scales::percent,
                       limits = c(-max_abs, max_abs)) + theme_minimal()
 ```
+<add later>
 
-## Descriptive Statistics
-
-# Executive Recommendation
+# 6. Executive Recommendation
 
 
-# References
+# 7. References
