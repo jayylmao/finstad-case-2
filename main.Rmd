@@ -1012,7 +1012,7 @@ stress_scenarios <- list(
 )
 ```
 
-We then calculate stress by multiplying the weights of each portofolio against the added stress to return a single day loss percentage value.
+We then calculate stress by multiplying the weights of each portfolio against the added stress to return a single day loss percentage value.
 ```{r}
 stress_test <- function(weights, scenario) {
   sum(weights * scenario)
