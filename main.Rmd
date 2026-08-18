@@ -611,7 +611,7 @@ gmv_weights <- setNames(gmv_sol$solution, assets)
 gmv_ret <- sum(gmv_weights * mu)
 gmv_vol <- as.numeric(sqrt(t(gmv_weights) %*% Sigma %*% gmv_weights))
 
-knitr::kable(data.frame(Asset = assets, Weight = round(gmv_weights, 4)))
+knitr::kable(data.frame(Weight = round(gmv_weights, 4)))
 ```
 
 ### Maximum Sharpe Portfolio
