@@ -807,8 +807,16 @@ data.frame(mc_results |> mutate(across(c(VaR, ES), ~ round(.x, 4))))
 
 **Historical vs. Monte Carlo Distribution**
 ```{r}
-# !VISUALIZATION
-# historical vs monte carlo dist
+sim_gmv <- rnorm(n_sim_val, mean = mean(port_returns$GMV, na.rm = TRUE),
+                  sd = sd(port_returns$GMV, na.rm = TRUE))
+
+bind_rows(
+  tibble(ret = port_returns$GMV, source = "Historical"),
+  tibble(ret = sim_gmv, source = "Monte Carlo")
+) |>
+  ggplot(aes(x = ret, fill = source)) + geom_density(alpha = 0.4) +
+  labs(title = "Historical vs. Monte Carlo Return Distribution (GMV Portfolio)",
+       x = "Daily Return", y = "Density", fill = NULL) + theme_minimal()
 ```
 
 #### Stress Testing
@@ -842,8 +850,22 @@ data.frame(stress_results |> mutate(across(where(is.numeric), ~ scales::percent(
 
 **Stress Testing Chart**
 ```{r}
-# !VISUALIZATION
-# stress testing chart
+max_abs <- stress_results |>
+  pivot_longer(-Scenario, names_to = "Portfolio", values_to = "loss") |>
+  pull(loss) |>
+  abs() |>
+  max(na.rm = TRUE)
+
+stress_results |>
+  pivot_longer(-Scenario, names_to = "Portfolio", values_to = "loss") |>
+  ggplot(aes(x = Scenario, y = loss, fill = Portfolio)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.4) +
+  coord_flip() +
+  labs(title = "Stress Testing: One-Day Portfolio \n Loss by Scenario",
+       x = NULL, y = "Portfolio Return", fill = NULL) +
+  scale_y_continuous(labels = scales::percent,
+                      limits = c(-max_abs, max_abs)) + theme_minimal()
 ```
 
 ## Descriptive Statistics
