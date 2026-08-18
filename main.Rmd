@@ -381,7 +381,9 @@ The strong correlation between AAPL and MSFT carries over into the covariance ma
 While descriptive stats offer good numerical insight into the data, visualization is needed to create a more complete exploratory financial analysis. Similar to the descriptive statistics section, the prices_php dataset is used as the base for every figure.
 
 #### Figure 2.1: Indexed Price Trend 
-Raw prices aren’t directly comparable since the assets trade on completely different price scales. Re-basing each series to start at 100 lets us compare growth trajectories side by side.
+
+We examine the indexed price trend of each asset. Due to the large difference in price scaling across the different assets, they are first normalized to a base value of 100 for a more comparable range of values. BTC evidently dominates the market in terms of price, reaching over 2000% return in late 2025, with other notable positive spikes in 2021, 2024, and 2025. AAPL, MSFT, and ICT also maintain fairly stable, steady upward trends, while BDO and SM show disappointing returns, with a slight dwindle in 2026 compared to previous years. SPY, as the most stable option and benchmark, is situated in between the two main clusters of assets in the graph.
+
 ```{r}
 indexed_prices <- prices_php|>
   select(date, BDO, ICT, SM, AAPL_PHP, MSFT_PHP, BTC_PHP, SPY_PHP) |>
@@ -399,6 +401,9 @@ ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
 ```
 
 #### Figure 2.2: Daily Return Distribution
+
+Displays the distribution of daily returns per asset through the use of histograms. Every asset tends to follow a normal distribution, and are centered around the 0.0 range. However, the range of these returns varies greatly, as seen in the visualizations for BTC, which reaches as low as a -50% return and as high as a 25% return due to its high volatility and variance. Conversely, our benchmark asset SPY has a very small range, peaking at approximately ±10% return.
+
 ```{r}
 returns_long_viz <-  prices_php|>
   select(date, BDO_return, ICT_return, SM_return, AAPL_return, MSFT_return, BTC_return, SPY_return) |>
@@ -417,6 +422,9 @@ ggplot(returns_long_viz, aes(x = return, fill = asset)) +
 ```
 
 #### Figure 2.3: 30-Day Rolling Volatility
+
+Shows the volatility of each asset as time passes, since volatility is itself an ever-changing aspect of an asset. An example of this is seen in the volatility of BTC. While its overall volatility was shown to be significantly higher than the rest of the assets in the descriptive statistics, it can be observed that its volatility began to stabilize over the years, eventually reaching a level of volatility similar to those of assets like ICT and BDO. Generally, the assets all reached the peak of their volatility during 2020, most likely due to the COVID-19 market crashes. However, they have all become somewhat stable since then, with SM, MSFT, and most notably SPY having the lowest volatility as of 2026.
+
 ```{r}
 rolling_vol <- prices_php |>
   arrange(date) |>
@@ -443,6 +451,9 @@ ggplot(rolling_vol, aes(x = date, y = rolling_vol, color = asset)) +
 ```
 
 #### Figure 2.4: Correlation Heatmap
+
+Displays the correlation between the daily returns of each individual asset pair. All of the correlations are positive, with incredibly strong correlations for the SPY-MSFT, SPY-AAPL, and AAPL-MSFT pairs, reaching as high as 0.8 correlation. The Philippine-based assets also share a moderate correlation with each other, around the 0.3-0.4 range.
+
 ```{r}
 corr_df <- as.data.frame(correlation_matrix) |>
   tibble::rownames_to_column("asset1") |>
@@ -475,6 +486,20 @@ return_vol_summary <- returns_long_viz |>
 
 data.frame(return_vol_summary)
 ```
+
+The table above compares the average daily and annual returns and volatility of each stock. Based on our previous explorations of descriptive statistics and data visualization, this lines up with our findings. BTC has the both the highest return and volatility across all of the assets, while AAPL, MSFT, and ICT all cluster together with similar values. SM and BDO still perform poorly, averaging negative returns while still being fairly volatile, especially in BDO’s case. When using SPY as a benchmark for the performance of the other assets, SM and BDO are the only stocks to perform worse than it. 
+
+Based on our findings, the following profiles emerge for each major type of asset:
+
+SPY (benchmark): SPY acts as a benchmark thanks to its low volatility, average returns, and good stability. When comparing its performance to the other assets, it tends to sit in the middle.
+
+Philippine Stocks (BDO, SM, ICT): ICT is the most worthwhile investment among the Philippine stocks, with a low correlation to the international stocks and an average return that can compete with them. Unfortunately, BDO and SM do not seem to be worth investing in due to their negative average return is moderate volatility and skewness.
+
+International Stocks (AAPL, MSFT): The international stocks follow similar trends with a strong correlation due to their shared location and industry. While they do not offer much diversification when purchased together, they are still fairly stable with good returns.
+
+
+Crypto (BTC):  The most volatile, high risk high reward asset option. However, it is worth noting that its volatility has seemed to stabilize to relatively similar levels to the international stocks.
+
 
 # 3. Portfolio Construction
 
