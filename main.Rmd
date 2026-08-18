@@ -676,36 +676,107 @@ SM and BDO notably fall vastly below the efficient frontier; an investor taking 
 ## Cross-Portfolio Visualizations
 
 #### Figure 4.2: Historical Price Plot
+
+This reuses the indexed price series built in Figure 2.1, since a historical price plot and an indexed price trend are the same underlying chart, with prices rebased to 100 so that a PHP-denominated PSE stock, a PHP-converted US stock, and PHP-converted BTC can sit on one axis.
 ```{r}
-# !VISUALIZATION
-# 
+ggplot(indexed_prices, aes(x = date, y = indexed_price, color = asset)) +
+  geom_line(linewidth = 0.7, na.rm = TRUE) +
+  labs(
+    title = "Historical Price Plot (Indexed, Base = 100, Jan 2020)",
+    x = "Date",
+    y = "Indexed Price"
+  ) +
+  theme_minimal()
 ```
 
 
 #### Figure 4.3: Daily Return Plot
+
+Figure 2.2 shows the *distribution* of daily returns as a histogram; this is a different chart that plots each asset's daily return series across time instead, making volatility clustering and crash periods visible directly rather than only summarized as a shape.
 ```{r}
-# !VISUALIZATION
-# 
+ggplot(returns_long_viz, aes(x = date, y = return, color = asset)) +
+  geom_line(alpha = 0.7, linewidth = 0.3, na.rm = TRUE) +
+  facet_wrap(~asset, scales = "free_y", ncol = 2) +
+  labs(
+    title = "Daily Return Plot by Asset",
+    x = "Date",
+    y = "Daily Return"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 ```
 
 #### Figure 4.4: Correlation Heatmap
+
+This reuses the correlation heatmap already built in Figure 2.4, placed here as well so that every required cross-portfolio visualization lives together in this section.
 ```{r}
-# !VISUALIZATION
-# 
+ggplot(corr_df, aes(x = asset1, y = asset2, fill = correlation)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(correlation, 2)), size = 3.5) +
+  scale_fill_gradient2(low = "steelblue", mid = "white", high = "firebrick", midpoint = 0) +
+  labs(
+    title = "Correlation Heatmap of Daily Returns",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal()
 ```
 
 #### Figure 4.5: Portfolio Allocation
 
+This chart compares how each of the three portfolio strategies (Equal Weight, GMV, Max Sharpe) splits its weight across the 6 assets, making the optimization results from the previous section directly visible side by side rather than as three separate tables.
 ```{r}
-# !VISUALIZATION
-# portfolio allocation
+alloc_df <- bind_rows(
+  tibble(asset = assets, weight = eq_weights, portfolio = "Equal Weight"),
+  tibble(asset = assets, weight = as.numeric(gmv_weights), portfolio = "GMV"),
+  tibble(asset = assets, weight = as.numeric(max_sharpe_weights), portfolio = "Max Sharpe")
+)
+
+ggplot(alloc_df, aes(x = asset, y = weight, fill = portfolio)) +
+  geom_col(position = "dodge") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Portfolio Allocation by Strategy",
+    x = NULL,
+    y = "Weight",
+    fill = NULL
+  ) +
+  theme_minimal()
 ```
 
 #### Figure 4.6: Optimized Portfolio Growth Comparison
 
+`portfolio_growth()` was only called on the equal-weight portfolio earlier (`eq_no_rebal`, `eq_rebal`). Before this chart can compare all three strategies, the GMV and Max Sharpe portfolios need their own growth paths computed the same way, with and without monthly rebalancing.
 ```{r}
-# !VISUALIZATION
-# portfolio growth comparison (rebalances vs no rebalance per portoflio)
+gmv_no_rebal <- portfolio_growth(gmv_weights, rebalance = FALSE) |>
+  mutate(portfolio = "GMV (No Rebalance)")
+gmv_rebal <- portfolio_growth(gmv_weights, rebalance = TRUE) |>
+  mutate(portfolio = "GMV (Monthly Rebalance)")
+
+sharpe_no_rebal <- portfolio_growth(max_sharpe_weights, rebalance = FALSE) |>
+  mutate(portfolio = "Max Sharpe (No Rebalance)")
+sharpe_rebal <- portfolio_growth(max_sharpe_weights, rebalance = TRUE) |>
+  mutate(portfolio = "Max Sharpe (Monthly Rebalance)")
+
+all_growth <- bind_rows(
+  eq_no_rebal, eq_rebal,
+  gmv_no_rebal, gmv_rebal,
+  sharpe_no_rebal, sharpe_rebal
+)
+
+data.frame(head(all_growth))
+```
+
+With all six growth paths available, we can now compare rebalanced versus non-rebalanced performance across all three strategies on one chart.
+```{r}
+ggplot(all_growth, aes(x = date, y = value, color = portfolio)) +
+  geom_line(linewidth = 0.6, na.rm = TRUE) +
+  labs(
+    title = "Optimized Portfolio Growth Comparison",
+    x = "Date",
+    y = "Value of $1 Invested"
+  ) +
+  theme_minimal()
 ```
 
 # 5. Portfolio Risk Assessment
