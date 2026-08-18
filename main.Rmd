@@ -850,7 +850,7 @@ stress_scenarios <- list(
   "PH Market Selloff (-15% local, flat abroad)" =
     c(BDO = -0.15, ICT = -0.15, SM = -0.15, AAPL = 0, MSFT = 0, BTC = 0),
   "International Market Selloff (-15% abroad, flat local)" =
-    c(BDO = 0, ICT = 0, SM = 0, AAPL = -0.15, MSFT = -0.15, BTC = -0.15),
+    c(BDO = 0, ICT = 0, SM = 0, AAPL = -0.15, MSFT = -0.15, BTC = 0),
   "Global Equity Correction (-10% equities, BTC -25%)" =
     c(BDO = -0.10, ICT = -0.10, SM = -0.10, AAPL = -0.10, MSFT = -0.10, BTC = -0.25)
 )
