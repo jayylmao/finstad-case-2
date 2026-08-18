@@ -777,6 +777,28 @@ data.frame(Portfolio = names(expected_shortfall),
             check.names = FALSE)
 
 ```
+**Risk Comparison per VaR**
+```{r}
+var_comparison <- bind_rows(
+  historical_var |>
+    pivot_longer(everything(), names_to = "Portfolio", values_to = "value") |>
+    mutate(Method = "Historical VaR"),
+  parametric_var |>
+    pivot_longer(everything(), names_to = "Portfolio", values_to = "value") |>
+    mutate(Method = "Parametric VaR"),
+  expected_shortfall |>
+    pivot_longer(everything(), names_to = "Portfolio", values_to = "value") |>
+    mutate(Method = "Expected Shortfall (CVaR)")
+) |>
+  mutate(Method = factor(Method, levels = c("Historical VaR", "Parametric VaR", "Expected Shortfall (CVaR)")))
+
+ggplot(var_comparison, aes(x = Portfolio, y = value, fill = Method)) +
+  geom_col(position = "dodge") +
+  labs(title = "Risk Comparison per VaR",
+       x = NULL, y = "Daily Loss (95% Confidence)", fill = NULL) +
+  scale_y_continuous(labels = scales::percent) + theme_minimal()
+```
+
 
 #### Monte Carlo Simulation
 
@@ -827,6 +849,8 @@ stress_scenarios <- list(
   "BTC Crash (-50%), rest flat" = c(BDO = 0, ICT = 0, SM = 0, AAPL = 0, MSFT = 0, BTC = -0.50),
   "PH Market Selloff (-15% local, flat abroad)" =
     c(BDO = -0.15, ICT = -0.15, SM = -0.15, AAPL = 0, MSFT = 0, BTC = 0),
+  "International Market Selloff (-15% abroad, flat local)" =
+    c(BDO = 0, ICT = 0, SM = 0, AAPL = -0.15, MSFT = -0.15, BTC = -0.15),
   "Global Equity Correction (-10% equities, BTC -25%)" =
     c(BDO = -0.10, ICT = -0.10, SM = -0.10, AAPL = -0.10, MSFT = -0.10, BTC = -0.25)
 )
