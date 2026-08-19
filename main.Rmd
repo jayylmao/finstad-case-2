@@ -77,10 +77,10 @@ prices_php <- list(
   BDO = bdo |> rename(BDO = CLOSE),
   ICT = ict |> rename(ICT = CLOSE),
   SM  = sm  |> rename(SM = CLOSE),
-  AAPL = yahoo_pull("AAPL"),
-  MSFT = yahoo_pull("MSFT"),
-  BTC  = yahoo_pull("BTC-USD"),
-  SPY  = yahoo_pull("SPY")
+  AAPL = yahoo_pull("AAPL", start = DATE_FROM, end = DATE_TO),
+  MSFT = yahoo_pull("MSFT", start = DATE_FROM, end = DATE_TO),
+  BTC  = yahoo_pull("BTC-USD", start = DATE_FROM, end = DATE_TO),
+  SPY  = yahoo_pull("SPY", start = DATE_FROM, end = DATE_TO)
 ) |> 
   reduce(inner_join, by = "date") |> 
   inner_join(fx, by = "date") |> 
@@ -1095,4 +1095,3 @@ The Investopedia Team. (2026, February 4). Modern Portfolio Theory: What MPT Is 
 - The Investopedia Team. (2024, November 26). Parametric Method in Value at Risk (VaR): Definition and Examples. https://www.investopedia.com/ask/answers/041715/what-variancecovariance-matrix-or-parametric-method-value-risk-var.asp
 - R. Harper, D. (2025, November 25). Understanding Value at Risk (VaR): Explanation and Calculation Methods. Investopedia. https://www.investopedia.com/articles/04/092904.asp
 - Kenton, W. (2026, March 24). Monte Carlo Simulation: What It Is, How It Works, History, 4 Key Steps. Investopedia. https://www.investopedia.com/terms/m/montecarlosimulation.asp
-
