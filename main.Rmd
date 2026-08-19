@@ -787,7 +787,7 @@ ggplot(alloc_df, aes(x = asset, y = weight, fill = portfolio)) +
 
 #### Figure 4.5: Optimized Portfolio Growth Comparison
 
-`portfolio_growth()` was only called on the equal-weight portfolio earlier (`eq_no_rebal`, `eq_rebal`). Before this chart can compare all three strategies, the GMV and Max Sharpe portfolios need their own growth paths computed the same way, with and without monthly rebalancing.
+`portfolio_growth()` was only called on the equal-weight portfolio earlier (`eq_no_rebal`, `eq_rebal`). Before this chart can compare all three strategies, the GMV and Max Sharpe portfolios need their own growth paths computed the same way, with and without monthly re-balancing.
 ```{r}
 gmv_no_rebal <- portfolio_growth(gmv_weights, rebalance = FALSE) |>
   mutate(portfolio = "GMV (No Rebalance)")
@@ -866,7 +866,7 @@ data.frame(port_summary)
 ## Historical VaR
 Historical value at risk is a simple non-parametric approach towards estimating  a portfolio’s maximum loss through simply sorting the portfolio’s actual daily returns from worst to best. It then assumes that history will repeat itself as far as the portfolio’s risk is concerned. 
 
-We compute historical VaR as the portoflio value multiplied against the quantile of the confidence score (1-a) 
+We compute historical VaR as the portfolio value multiplied against the quantile of the confidence score (1-a) 
 ```{r}
 historical_var <- port_returns |>
   summarise(across(
