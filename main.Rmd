@@ -116,11 +116,14 @@ NROW(tbill91)
 ```
 
 We then clean the Treasury bill rates by dropping the blank months and
-computing the annual and daily risk-free rate.
+computing the annual and daily risk-free rate. The blank months are the
+no-auction months present in the downloaded data.
 
 ```{r}
+blank_months_dropped <- sum(is.na(tbill91))
 tbill91_pct <- na.omit(tbill91)                # drops blank / no-auction months
 NROW(tbill91_pct)
+NROW(tbill91) - NROW(tbill91_pct)
 
 rf_annual <- mean(tbill91_pct) / 100           # ~4% expected
 rf_daily  <- (1 + rf_annual)^(1 / 252) - 1     # use in Sharpe / frontier
