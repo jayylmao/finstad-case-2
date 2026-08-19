@@ -823,6 +823,38 @@ ggplot(all_growth, aes(x = date, y = value, color = portfolio)) +
   ) +
   theme_minimal()
 ```
+#### Indexed Portfolio Growth vs SPY
+
+The previous figure showed the absolute growth of one dollar invested per strategy. This chart instead indexes each portfolio to a base of 100 on the first day of the sample, the portfolio-level equivalent of the per-asset indexed price trend seen previously, and plots it against the SPY benchmark on the same scale for a direct comparison of relative performance.
+
+```{r}
+indexed_port_returns <- port_returns |>
+  mutate(across(-date, ~ cumprod(1 + .x) * 100)) |>
+  inner_join(
+    prices_php |>
+      transmute(date = date, SPY = SPY_PHP / first(SPY_PHP) * 100),
+    by = "date"
+  ) |>
+  tidyr::pivot_longer(-date, names_to = "portfolio", values_to = "indexed_value")
+
+ggplot() +
+  geom_line(data = filter(indexed_port_returns, portfolio == "SPY"),
+            aes(x = date, y = indexed_value, color = portfolio),
+            linewidth = 0.7, linetype = "dashed", na.rm = TRUE) +
+  geom_line(data = filter(indexed_port_returns, portfolio != "SPY"),
+            aes(x = date, y = indexed_value, color = portfolio),
+            linewidth = 0.7, na.rm = TRUE) +
+  labs(
+    title = "Figure 4.6: Indexed Portfolio Growth vs SPY (Base = 100)",
+    x = "Date",
+    y = "Indexed Value",
+    color = NULL
+  ) +
+  scale_color_viridis_d() +
+  theme_minimal()
+```
+
+Indexing the portfolios to 100 makes the relative performance directly comparable with the SPY benchmark. Max Sharpe ends the sample with the highest indexed value, followed by Equal-Weight, with GMV the lowest of the three, mirroring the return ordering from the portfolio descriptive statistics table in Section 5. SPY's dashed path sits below Equal-Weight and Max Sharpe over most of the period, so each strategy did manage to beat the benchmark in cumulative terms over 2020-2025, with the caveat that GMV's flatter path is also its compensation for its markedly lower volatility and drawdown.
 
 # 6. Portfolio Risk Assessment
 
