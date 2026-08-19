@@ -111,6 +111,8 @@ tbill91 <- unlist(lapply(2020:2025, function(yr) {
   row_91 <- gs[which(grepl("91-day", as.character(gs[[2]]))), ]   # label in col 2
   as.numeric(unlist(row_91[1, seq(3, 25, by = 2)]))               # C,E,G,...,Y
 }))
+
+NROW(tbill91)
 ```
 
 We then clean the Treasury bill rates by dropping the blank months and
@@ -118,6 +120,8 @@ computing the annual and daily risk-free rate.
 
 ```{r}
 tbill91_pct <- na.omit(tbill91)                # drops blank / no-auction months
+NROW(tbill91_pct)
+
 rf_annual <- mean(tbill91_pct) / 100           # ~4% expected
 rf_daily  <- (1 + rf_annual)^(1 / 252) - 1     # use in Sharpe / frontier
 ```
